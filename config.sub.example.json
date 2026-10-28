@@ -1,0 +1,10 @@
+{
+  "root": "D:/agents/my-aipa",
+  "runtimeDir": "D:/aipa-state/sub",
+  "mainUrl": "https://your-main-hub.example.com",
+  "nodeId": "sub-main-server",
+  "installationId": "REPLACE_WITH_OWNER_ENROLLMENT",
+  "token": "REPLACE_WITH_DEVICE_TOKEN",
+  "engine": "codex",
+  "testMode": true
+}

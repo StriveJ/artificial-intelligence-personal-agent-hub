@@ -1,0 +1,29 @@
+{
+  "name": "aipa-hub",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "description": "AIPA personal web host with scheduled tasks and proactive pushes",
+  "engines": {
+    "node": ">=24"
+  },
+  "scripts": {
+    "start": "node server.mjs",
+    "test": "node --test tests/*.test.mjs",
+    "start:main": "node main-server.mjs",
+    "start:sub": "node sub-server.mjs",
+    "preview:markdown": "node tests/preview-markdown.mjs"
+  },
+  "dependencies": {
+    "sharp": "0.35.5"
+  },
+  "license": "Apache-2.0",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/StriveJ/artificial-intelligence-personal-agent-hub.git"
+  },
+  "homepage": "https://github.com/StriveJ/artificial-intelligence-personal-agent-hub#readme",
+  "bugs": {
+    "url": "https://github.com/StriveJ/artificial-intelligence-personal-agent-hub/issues"
+  }
+}

@@ -1,0 +1,28 @@
+import test from 'node:test';
+import assert from 'node:assert/strict';
+import { mkdirSync, mkdtempSync, readFileSync, writeFileSync } from 'node:fs';
+import { join, resolve } from 'node:path';
+import { createMainReports } from '../lib/main-reports.mjs';
+const base = resolve(process.env.AIPA_TEST_TMP || 'aipa-test-tmp'); mkdirSync(base, { recursive: true });
+test("Bad daily reports back off independently while healthy days revise and failures remain recoverable after restart", async () => {
+  const work = mkdtempSync(join(base, 'report-isolation-')), root = join(work, 'instance'), runtimeDir = join(work, 'runtime');
+  mkdirSync(join(root, 'state/events'), { recursive: true });
+  let now = Date.parse('2026-10-21T08:00:00Z');
+  const make = () => createMainReports({ root, runtimeDir, nodes: { list: () => [], operations: () => [] }, now: () => now });
+  let reports = make(); for (const day of ['2026-10-19', '2026-10-20']) await reports.daily(day);
+  const broken = join(root, 'user-space/logs/daily/DAILY-NOTE_2026-10-20.md'), valid = readFileSync(broken, 'utf8');
+  writeFileSync(broken, valid.replace('<!-- aipa-hub:daily:end -->', 'broken ending'));
+  for (const day of ['2026-10-19', '2026-10-20']) writeFileSync(join(root, 'state/events', day + '@synthetic.jsonl'), JSON.stringify({ id: day, ts: day + 'T08:00:00Z', data: 'synthetic late event' }) + '\n');
+  let result = await reports.tick(); assert.equal(result.status, 'partial'); assert.ok(result.failedDays.includes('2026-10-20'));
+  const meta = JSON.parse(readFileSync(join(root, 'user-space/logs/hub/reports/daily/2026-10-19.json')));
+  assert.equal(meta.sourceCounts.events, 1); assert.ok(meta.revision > 1);
+  const badBytes = readFileSync(broken, 'utf8'); assert.match(badBytes, /broken ending/);
+  reports = make(); result = await reports.tick(); assert.equal(result.status, 'partial'); assert.equal(readFileSync(broken, 'utf8'), badBytes);
+  const healthy=readFileSync(join(root,'user-space/logs/daily/DAILY-NOTE_2026-10-19.md'),'utf8');
+  writeFileSync(broken, valid);
+  result=await reports.retryFailure('daily/2026-10-20');assert.equal(result.status,'success');
+  assert.equal(readFileSync(join(root,'user-space/logs/daily/DAILY-NOTE_2026-10-19.md'),'utf8'),healthy);
+  const recovered=readFileSync(broken,'utf8');assert.equal((await reports.retryFailure('daily/2026-10-20')).code,'already-recovered');assert.equal(readFileSync(broken,'utf8'),recovered);
+  await assert.rejects(()=>reports.retryFailure('daily/../../outside'),/invalid/i);
+  now += 11 * 60_000;result = await reports.tick(); assert.equal(result.status, 'success'); assert.deepEqual(result.failedDays, []);
+});

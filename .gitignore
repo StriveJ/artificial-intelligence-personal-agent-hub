@@ -1,0 +1,16 @@
+# Device-local runtime, authentication, model configuration and logs
+.aipa-hub/
+.env
+.env.*
+!.env.example
+*.log
+# Dependencies, coverage and isolated synthetic fixtures
+node_modules/
+coverage/
+aipa-test-tmp/
+.DS_Store
+Thumbs.db
+AIPA-INSTANCE.md
+.claude/session-history/
+.codebuddy/commands/aipa.md
+.claude/commands/aipa.md

@@ -1,0 +1,199 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+  <meta name="theme-color" content="#184d42">
+  <meta name="description" content="Chat anywhere, capture ideas, and recall your experience.">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <title>AIPA · Your personal agent, wherever you go</title>
+  <link rel="icon" href="/icon.svg" type="image/svg+xml">
+  <link rel="manifest" href="/manifest.webmanifest">
+  <link rel="stylesheet" href="/style.css">
+  <link rel="stylesheet" href="/pushes.css">
+  <link rel="stylesheet" href="/agenda.css">
+  <link rel="stylesheet" href="/status.css">
+  <link rel="stylesheet" href="/navigation.css">
+  <script type="module" src="/app.js"></script>
+</head>
+<body>
+  <section id="login" class="login-shell" hidden>
+    <form id="login-form" class="login-card">
+      <img class="brand-icon" src="/icon.svg" alt="AIPA">
+      <p class="eyebrow">YOUR PERSONAL AGENT</p>
+      <h1>Connect to your AIPA</h1>
+      <p class="muted">Enter the pairing code shown on the local Hub page to access your ideas and memories.</p>
+      <label for="pair-code">Pairing code</label>
+      <input id="pair-code" name="code" type="password" autocomplete="current-password" required placeholder="Paste pairing code">
+      <button class="primary" type="submit">Connect AIPA <span aria-hidden="true">↗</span></button>
+      <p id="login-error" class="error" role="alert"></p>
+    </form>
+  </section>
+  <div id="app" class="app-shell" hidden>
+    <aside class="sidebar">
+      <a class="brand" href="/" aria-label="AIPA home"><img src="/icon.svg" alt=""><span>AIPA<small>Your personal agent</small></span></a>
+      <button id="new-chat" class="new-chat">＋ New conversation</button>
+      <nav id="desktop-navigation" class="desktop-nav" aria-label="Main navigation"></nav>
+      <p class="navigation-help">Use the pin buttons to customize the bottom navigation.</p>
+      <div class="history-heading"><p class="sidebar-label">Recent conversations</p><button id="manage-history" class="text-button">Manage</button></div>
+      <div id="chat-list" class="chat-list"></div>
+      <div class="sidebar-footer"><span class="online-dot"></span><span id="instance-name">Connecting</span><button id="connect-phone" class="icon-button" aria-label="Connect phone" title="Connect phone">↗</button></div>
+    </aside>
+    <main>
+      <header class="topbar">
+        <button id="open-sidebar" class="icon-button mobile-only" aria-label="Open sidebar" aria-haspopup="dialog">☰</button>
+        <div class="mobile-brand"><img src="/icon.svg" alt=""><strong>AIPA</strong></div>
+        <div class="topbar-label" id="view-label">Chat</div>
+        <div class="status-pill"><span class="online-dot"></span><span id="connection-status">Connected</span></div>
+        <button id="mobile-history" class="icon-button mobile-only" aria-label="Conversation history" title="Conversation history">◷</button>
+        <button id="mobile-new-chat" class="icon-button mobile-only" aria-label="New conversation">＋</button>
+      </header>
+      <p id="sync-notice" class="sync-notice" role="status" hidden></p>
+      <button id="push-notice" class="push-notice" hidden></button>
+      <section id="chat-view" class="view chat-view">
+        <div id="welcome" class="welcome">
+          <p id="today" class="eyebrow"></p>
+          <div class="welcome-mark" aria-hidden="true">✳</div>
+          <h1>Keep your ideas today.<br>Build on them tomorrow.</h1>
+          <p class="muted">Explore an idea or revisit past experience.<br>Your AIPA starts with relevant memories.</p>
+          <div class="suggestions">
+            <button data-prompt="Help me review my recent ideas. Which ones are worth pursuing?"><span>↗</span> Continue an earlier idea</button>
+            <button data-prompt="I have a new idea. Help me clarify the problem it should solve."><span>＋</span> Work through a problem</button>
+            <button data-action="memory"><span>⌕</span> Find a past memory</button>
+          </div>
+        </div>
+        <div id="messages" class="messages" aria-live="polite"></div>
+        <details id="web-search-settings-panel" class="push-settings web-search-settings"><summary>Web search settings (Bing by default, no API key)</summary>
+          <form id="web-search-settings-form">
+            <label>Search provider <select id="web-provider"></select></label>
+            <label>API Key（Optional override for DeepSeek; required for Bocha / Tavily）<input id="web-key" type="password" maxlength="200" autocomplete="off"></label>
+            <p class="muted" id="web-credential-status"></p>
+            <label>SearXNG URL (required for SearXNG)<input id="web-endpoint" type="url" maxlength="300" placeholder="https://searx.example.com"></label>
+            <label>Results per search <select id="web-max"><option value="4">4</option><option value="6">6</option><option value="8">8</option><option value="10">10</option></select></label>
+            <label>Daily search limit <select id="web-daily-cap"><option value="40">40 requests</option><option value="80">80 requests</option><option value="150">150 requests</option><option value="300">300 requests</option></select></label>
+            <label>Daily page-reading limit <input id="web-fetch-daily-cap" type="number" min="1" max="300" value="40"></label>
+            <p class="muted" id="web-search-status"></p>
+            <button class="primary" type="submit">Save search settings</button>
+            <button id="web-check" type="button">Check connection (sends a public sample and uses quota)</button>
+            <button id="web-clear-key" type="button">Clear this provider’s separate API key</button>
+          </form>
+        </details>
+        <div class="composer-area">
+          <p id="engine-warning" class="notice" hidden></p>
+          <label id="chat-project-row" class="project-scope" hidden>Conversation project <select id="chat-project" aria-label="Conversation project"><option value="">Global context</option></select><span>Select a project for a new chat. Global personal rules still apply.</span></label>
+          <form id="chat-form" class="composer">
+            <label class="sr-only" for="message-input">Message to AIPA</label>
+            <textarea id="message-input" rows="2" maxlength="8000" placeholder="What would you like to discuss with AIPA?"></textarea>
+            <div class="composer-bottom"><span>You can also dictate using your phone keyboard</span><button id="send-message" class="send-button" type="submit" aria-label="Send message">↑</button></div>
+          </form>
+          <label id="context-consent-row" class="consent"><input id="context-consent" type="checkbox"><span id="context-consent-label">Confirm what information this conversation may use.</span></label>
+          <fieldset id="vision-consent-row" class="image-mode-panel" hidden aria-describedby="vision-consent-label">
+            <legend>Image processing for this turn</legend>
+            <div class="image-mode-options">
+              <label class="image-mode-option"><input id="image-mode-save" type="radio" name="image-mode" value="save" checked><span class="image-mode-card"><span class="image-mode-name"><svg viewBox="0 0 20 20" aria-hidden="true"><path d="M4 3h10l3 3v11H3V3h1Zm2 0v5h7V3M6 17v-6h8v6"/></svg><strong>Save only</strong></span><small>No model call</small></span></label>
+              <label class="image-mode-option"><input type="radio" name="image-mode" value="vision"><span class="image-mode-card"><span class="image-mode-name"><svg viewBox="0 0 20 20" aria-hidden="true"><path d="M2 10s3-5 8-5 8 5 8 5-3 5-8 5-8-5-8-5Z"/><circle cx="10" cy="10" r="2"/></svg><strong>Analyze image</strong></span><small>Analyze image contents</small></span></label>
+              <label class="image-mode-option"><input type="radio" name="image-mode" value="web"><span class="image-mode-card"><span class="image-mode-name"><svg viewBox="0 0 20 20" aria-hidden="true"><circle cx="10" cy="10" r="7"/><path d="M3 10h14M10 3c4 4 4 10 0 14-4-4-4-10 0-14Z"/></svg><strong>Image and web</strong></span><small>Identify, then search</small></span></label>
+            </div>
+            <p id="vision-consent-label" class="image-mode-summary" aria-live="polite">Images and descriptions are archived without sending them to a model or search service.</p>
+            <details class="image-mode-details"><summary>View processing scope</summary><p id="vision-consent-detail"></p></details>
+          </fieldset>
+          <label id="web-consent-row" class="consent"><input id="allow-web" type="checkbox"><span id="allow-web-label">Allow web search for this turn (Hub searches and cites source domains)</span></label>
+          <details id="web-query-label" class="composer-hint" hidden><summary>Advanced: specify a search query (optional)</summary><label>Leave blank to generate a query from this question<input id="web-query" type="text" maxlength="256" autocomplete="off" placeholder="Leave blank for automatic queries, e.g. DeepSeek Search documentation"></label></details>
+          <p class="composer-hint">Your input is saved locally first. You can switch apps and return to read the answer.</p>
+        </div>
+      </section>
+      <section id="notes-view" class="view content-view" hidden>
+        <div class="section-intro"><p class="eyebrow">CAPTURE THE MOMENT</p><h1>Capture the idea while it is fresh.</h1><p class="muted">Write it as it comes. Notes are saved in your AIPA instance without calling a model.</p></div>
+        <form id="note-form" class="note-composer"><label class="sr-only" for="note-input">Note contents</label><textarea id="note-input" rows="5" maxlength="8000" placeholder="Something that just came to mind..."></textarea><div><span class="muted">Original records, searchable in memory</span><button id="save-note" class="primary" type="submit">Save idea <span aria-hidden="true">＋</span></button></div></form>
+        <div class="list-heading"><h2>Recent notes</h2><span id="notes-count" class="muted"></span></div>
+        <div id="notes-list" class="notes-list"></div>
+      </section>
+      <section id="memory-view" class="view content-view" hidden>
+        <div class="section-intro"><p class="eyebrow">YOUR OWN KNOWLEDGE</p><h1>Your experience, within reach.</h1><p class="muted">Search AIPA memories and notes to revisit past experience and decisions.</p></div>
+        <form id="search-form" class="search-form"><label class="sr-only" for="search-input">Memory keywords</label><span aria-hidden="true">⌕</span><input id="search-input" type="search" maxlength="1000" placeholder="Enter keywords, such as a project or preference..."><button class="primary" type="submit">Search</button></form>
+        <p id="search-summary" class="muted">Enter keywords to find relevant information.</p>
+        <div id="search-results" class="search-results"></div>
+      </section>
+      <section id="tasks-view" class="view content-view" hidden>
+        <div class="section-intro"><p class="eyebrow">KEEP THINGS UP TO DATE</p><h1>Stay up to date, on schedule.</h1><p class="muted">Tasks run automatically while the Hub device is online. Review results or run one now.</p></div>
+        <div id="tasks-list" aria-live="polite"></div>
+          <section id="main-management" hidden>
+            <div class="list-heading"><h2>Main Hub and devices</h2><button id="refresh-nodes" class="text-button">Refresh</button></div>
+            <p id="main-mode" class="muted"></p>
+            <div id="hub-nodes" aria-live="polite"></div>
+            <p class="muted">See Runtime status for complete device information and activity logs.</p>
+            <p><button id="main-start" class="primary">Start today’s work</button> <button id="main-close" class="primary">Close today’s work</button></p>
+            <p id="main-report-state" class="muted"></p>
+            <div id="main-report-links"></div>
+            <div id="main-report-detail"></div>
+            <details><summary>Recovery and distillation phases</summary><div id="main-recovery" aria-live="polite"></div></details>
+            <details><summary>Conflict evidence and owner decisions</summary><div id="main-conflict-review" aria-live="polite"></div></details>
+            <details class="push-settings"><summary>Hub upgrades and rollback</summary>
+              <p id="hub-update-status" class="muted">Loading maintenance status...</p>
+              <button id="hub-update-check" class="text-button">Check trusted releases</button>
+              <p><label>Action <select id="hub-update-action"><option value="upgrade">Upgrade</option><option value="rollback">Rollback</option></select></label>
+              <label>Version <select id="hub-update-release"></select></label></p>
+              <button id="hub-update-plan" class="primary" disabled>Prepare and verify release</button>
+              <p id="hub-update-plan-detail" class="muted"></p>
+              <button id="hub-update-apply" class="primary" disabled>Apply prepared plan</button>
+              <div id="hub-update-history" aria-live="polite"></div>
+            </details>
+          </section>
+      </section>
+      <section id="status-view" class="view content-view" hidden>
+        <div class="section-intro"><p class="eyebrow">WHAT IS RUNNING RIGHT NOW</p><h1>Devices and activity at a glance.</h1><p class="muted">View main and sub Hub availability, recent synchronization, and activity. Logs contain actions and results, without conversation content.</p></div>
+        <p id="status-summary" class="status-summary" aria-live="polite"></p>
+        <p id="status-entry" class="status-entry" hidden></p>
+        <div class="list-heading"><h2>DevicesStatus</h2><button id="status-refresh" class="text-button">Refresh</button></div>
+        <div id="status-devices" class="device-grid" aria-live="polite"></div>
+        <div class="list-heading"><h2>Activity log</h2><span id="status-activity-count" class="muted"></span></div>
+        <div id="status-filters" class="activity-toolbar" role="group" aria-label="Log filters"></div>
+        <p id="status-activity-empty" class="activity-empty" hidden>No activity yet. Run synchronization from Scheduled tasks to get started.</p>
+        <ol id="status-activity" class="activity-timeline" aria-live="polite"></ol>
+        <nav id="status-pager" class="status-pager" hidden>
+          <button id="status-prev" class="pager-button" type="button">Previous page</button>
+          <span id="status-page" class="muted"></span>
+          <button id="status-next" class="pager-button" type="button">Next page</button>
+        </nav>
+      </section>
+      <section id="pushes-view" class="view content-view" hidden>
+        <div class="section-intro"><p class="eyebrow">A LITTLE AHEAD OF YOU</p><h1>Ready when you are.</h1><p class="muted">Receive proactive content from AIPA in one inbox, starting with daily news.</p></div>
+        <p><button id="agenda-open-all" class="text-button" type="button">View all agenda items</button></p>
+        <details class="push-settings"><summary>Agenda notification settings</summary><form id="agenda-settings-form"><label class="check-line"><input id="agenda-enabled" type="checkbox">Show the next three agenda items daily</label><label>Daily at <input id="agenda-time" type="time" value="07:00" required></label><span id="agenda-zone" class="muted"></span><button class="primary" type="submit">Save agenda settings</button></form></details>
+        <p class="muted">Schedules use the shared instance timezone. Choose an IANA zone in <code>user-space/llm-provider.yaml</code> (<code>time_zone</code>) and keep Hub configuration aligned.</p>
+        <div id="push-producers" class="push-producers"></div>
+        <details id="briefing-settings-panel" class="push-settings"><summary>Daily news: interests and schedule</summary>
+          <form id="briefing-settings-form">
+            <label class="check-line"><input id="briefing-enabled" type="checkbox">Enable daily news</label>
+            <div class="schedule-row"><label>Daily at <input id="briefing-time" type="time" value="07:00" required></label><span id="briefing-zone" class="muted"></span></div>
+            <fieldset><legend>Interest categories</legend><div id="briefing-categories" class="choice-grid"></div></fieldset>
+            <label for="briefing-interests">Specific interests (optional)</label><textarea id="briefing-interests" rows="2" maxlength="400" placeholder="For example: AI agents, macroeconomics, technology policy"></textarea>
+            <fieldset><legend>Custom interest categories (matched by keywords)</legend>
+              <div class="inline-add"><input id="briefing-cc-label" type="text" maxlength="20" placeholder="Category, e.g. semiconductors"><input id="briefing-cc-keywords" type="text" maxlength="120" placeholder="Comma-separated keywords, e.g. chips,lithography,fabrication"><button id="briefing-cc-add" type="button" class="text-button">Add</button></div>
+              <div id="briefing-custom-categories" class="chip-list"></div>
+            </fieldset>
+            <fieldset><legend>Public sources</legend><div id="briefing-sources" class="source-choices"></div></fieldset>
+            <fieldset><legend>Custom sources (public RSS / Atom over HTTPS)</legend>
+              <div class="inline-add"><input id="briefing-cs-name" type="text" maxlength="30" placeholder="Source name"><input id="briefing-cs-url" type="url" maxlength="300" placeholder="https://example.com/feed.xml"><button id="briefing-cs-add" type="button" class="text-button">Add</button></div>
+              <div id="briefing-custom-sources" class="chip-list"></div>
+              <p class="muted">Use public URLs only. Private networks, loopback, and explicit ports are rejected.</p>
+            </fieldset>
+            <label class="check-line">Maximum items per briefing: <select id="briefing-max-items"><option value="20">20</option><option value="40">40</option><option value="60">60</option><option value="80">80</option><option value="100">100</option></select> records</label>
+            <p class="muted settings-help">About 70% of ranking follows your likes and 30% explores other items. Likes affect order without excluding other categories.</p>
+            <p class="muted settings-help">Only selected public news and the interests entered here are sent to the current model. Briefings are saved in the AIPA repository and synchronized with it.</p>
+            <button class="primary" type="submit">Save settings</button>
+          </form>
+        </details>
+        <div class="list-heading"><h2>Notification inbox</h2><span id="push-count" class="muted"></span></div>
+        <div id="push-inbox" class="push-inbox"></div>
+        <div id="push-detail" aria-live="polite"></div>
+      </section>
+    </main>
+    <nav id="bottom-navigation" class="mobile-nav" aria-label="Bottom navigation"></nav>
+  </div>
+  <dialog id="sidebar-dialog" class="sidebar-drawer" aria-label="Sidebar"><form method="dialog"><button class="dialog-close" aria-label="Close sidebar">×</button></form><div class="drawer-brand"><img src="/icon.svg" alt=""><strong>AIPA</strong></div><p class="eyebrow">All features</p><nav id="drawer-navigation" aria-label="Sidebar navigation"></nav><p class="navigation-help">Pin frequently used features to the bottom navigation. Click again to unpin. The layout is stored in this browser.</p><button id="drawer-history" class="drawer-history">◷ Conversation history and hidden chats</button></dialog>
+  <dialog id="history-dialog" class="connection-dialog"><form method="dialog"><button class="dialog-close" aria-label="Close conversation history">×</button></form><h2>Conversation history</h2><div class="history-tabs" role="tablist" aria-label="Conversation list"><button id="history-visible" role="tab" aria-selected="true">Conversation history</button><button id="history-hidden" role="tab" aria-selected="false">Hidden</button></div><p class="history-help">Hide from list changes only this web view. Original conversations, events, and repository data remain available. Restore chats from Hidden.</p><div id="mobile-chat-list" class="chat-list history-list"></div></dialog>
+  <dialog id="connection-dialog" class="connection-dialog"><form method="dialog"><button class="dialog-close" aria-label="Close">×</button></form><p class="eyebrow">STAY CONNECTED</p><h2>Take AIPA with you</h2><p id="phone-help" class="muted"></p><div id="pairing-details" hidden><label>Phone access URL</label><p id="remote-url" class="code-value"></p><label>Pairing code</label><p id="pairing-value" class="code-value"></p><button id="copy-pairing" class="primary">Copy pairing code</button></div><button id="logout" class="text-button">Sign out this device</button></dialog>
+  <div id="toast" class="toast" role="status" hidden></div>
+</body>
+</html>
