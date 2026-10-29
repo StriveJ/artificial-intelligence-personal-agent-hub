@@ -58,6 +58,8 @@ Hub 程序、私人实例与设备本地运行配置应分别存放。只有主 
 
 准备 Node.js 24 或更高版本、Git 2.31 或更高版本，以及受支持的执行器：`claude`、`codex` 或受控 `harness` 适配器。先按照 [Personal 安装指南](https://github.com/StriveJ/artificial-intelligence-personal-agent#install) 初始化 AIPA 实例。单独验证执行器与所选模型账号可用；模型调用可能产生费用。
 
+Windows 下建议使用较短的源码、实例和运行目录，例如 `D:/aipa/hub`、`D:/aipa/instance`、`D:/aipa/runtime`。Git 临时工作树与 SQLite 快照会继续增加路径层级。
+
 ```sh
 git clone https://github.com/StriveJ/artificial-intelligence-personal-agent-hub.git
 cd artificial-intelligence-personal-agent-hub

@@ -58,6 +58,8 @@ Hub software, private instance data and device-local runtime configuration belon
 
 Install Node.js 24 or newer, Git 2.31 or newer, and a supported executor (`claude`, `codex` or the controlled `harness` adapter). Initialize an AIPA instance using the [Personal guide](https://github.com/StriveJ/artificial-intelligence-personal-agent#install) before starting Hub. Verify the executor with your intended model account; model usage may incur provider charges.
 
+On Windows, use short source, instance and runtime paths, such as `D:/aipa/hub`, `D:/aipa/instance` and `D:/aipa/runtime`. Git worktrees and SQLite snapshots create additional nested paths.
+
 ```sh
 git clone https://github.com/StriveJ/artificial-intelligence-personal-agent-hub.git
 cd artificial-intelligence-personal-agent-hub

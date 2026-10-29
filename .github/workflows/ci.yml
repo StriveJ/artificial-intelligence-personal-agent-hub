@@ -16,32 +16,39 @@ jobs:
         os: [ubuntu-latest, windows-latest]
     runs-on: ${{ matrix.os }}
     env:
-      AIPA_ORIGIN_ROOT: ${{ github.workspace }}/artificial-intelligence-origin-agent
+      AIPA_ORIGIN_ROOT: ${{ github.workspace }}/origin
       AIPA_TEST_HARNESS_ENTRY: ''
     steps:
+      - name: Configure deterministic Git and Windows paths
+        shell: bash
+        run: |
+          git config --global core.autocrlf false
+          git config --global core.longpaths true
+          git config --global user.name "AIPA CI"
+          git config --global user.email "ci@example.invalid"
       - name: Check out Hub
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
         with:
-          path: artificial-intelligence-personal-agent-hub
+          path: hub
           persist-credentials: false
       - name: Check out public Core source
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
         with:
           repository: StriveJ/artificial-intelligence-origin-agent
           ref: master
-          path: artificial-intelligence-origin-agent
+          path: origin
           persist-credentials: false
       - name: Set up Node.js
         uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7
         with:
           node-version: '24'
           cache: npm
-          cache-dependency-path: artificial-intelligence-personal-agent-hub/package-lock.json
+          cache-dependency-path: hub/package-lock.json
       - name: Install locked dependencies
-        working-directory: artificial-intelligence-personal-agent-hub
+        working-directory: hub
         run: npm ci --ignore-scripts
       - name: Run synthetic tests
-        working-directory: artificial-intelligence-personal-agent-hub
+        working-directory: hub
         run: node --test --test-reporter=tap tests/*.test.mjs
 
 # External Harness acceptance is opt-in and needs a separately supplied, verified
