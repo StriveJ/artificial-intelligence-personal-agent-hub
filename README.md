@@ -150,6 +150,13 @@ npm test
 
 Core integration tests use a sibling `artificial-intelligence-origin-agent` checkout, or `AIPA_ORIGIN_ROOT` pointing to a public Origin checkout. Missing default source is explicitly skipped where supported; an invalid explicit path fails. Tests use synthetic fixtures and model stubs unless an optional controlled executor test is explicitly enabled. Do not point tests at a private instance.
 
+## Contact
+
+If you have any suggestions or ideas, feel free to contact me by email:
+
+- [1905212905@qq.com](mailto:1905212905@qq.com)
+- [strivejun@gmail.com](mailto:strivejun@gmail.com)
+
 ## License
 
 Original code and documentation use [Apache License 2.0](LICENSE), including its express patent grant and patent-litigation termination terms in Section 3. Third-party components retain their licenses; see [browser vendor notices](public/vendor/README.md). Installing Hub does not publish your private instance data.

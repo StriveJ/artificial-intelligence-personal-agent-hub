@@ -143,6 +143,13 @@ npm test
 
 Core 集成测试默认使用同级 `artificial-intelligence-origin-agent` 检出，也可设置 `AIPA_ORIGIN_ROOT` 指向公共 Origin。支持跳过的测试在默认源码缺失时会明确标记；显式配置无效路径会失败。测试使用合成夹具和模型桩，除非显式启用可选受控执行器测试；不要指向私人实例。
 
+## 联系我
+
+如果你有什么建议与想法，可以发邮箱联系我：
+
+- [1905212905@qq.com](mailto:1905212905@qq.com)
+- [strivejun@gmail.com](mailto:strivejun@gmail.com)
+
 ## 许可
 
 原创代码和文档采用 [Apache License 2.0](LICENSE)，包含第 3 条明确专利授权和专利诉讼终止条款。第三方组件保留各自许可，详见[浏览器组件声明](public/vendor/README.md)。安装 Hub 不会公开私人实例数据。
