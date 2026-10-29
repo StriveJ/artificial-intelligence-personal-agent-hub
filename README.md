@@ -16,6 +16,34 @@ AIPA Hub 1.0.0 gives your private AIPA assistant a Web interface and an optional
 
 The interface, source and command-line messages are English. Model replies can follow the user's language. Actual model, image and language support depends on your executor and provider.
 
+## Web interface
+
+Screenshots show an isolated demo instance with synthetic data and a fixed example reply.
+
+### Chat with context
+
+Continue conversations with relevant personal context and review the sources used in a reply. Keep earlier conversations within reach, and choose whether a turn may use Web search or image analysis.
+
+![AIPA Hub conversation with a synthetic reading-assistant example](docs/screenshots/chat.jpg)
+
+### Quick notes
+
+Capture an idea immediately, add an image when useful, and revisit recent notes. Saving a note stores the original content in your instance without calling a model.
+
+![AIPA Hub quick notes with a note composer and recent ideas](docs/screenshots/notes.jpg)
+
+### Memory search
+
+Search memories and saved notes by keyword. Results include excerpts and source locations so you can revisit the original context.
+
+![AIPA Hub memory search showing memory and note results with source paths](docs/screenshots/memory.jpg)
+
+### Runtime status
+
+Check Main and Sub Hub availability, Core and Hub versions, synchronization state, and upcoming tasks. Filter the activity log to inspect actions and results.
+
+![AIPA Hub runtime status with a synthetic device and activity log](docs/screenshots/runtime-status.jpg)
+
 ## Repositories
 
 | Repository | Purpose |
