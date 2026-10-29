@@ -2,7 +2,7 @@
 
 [English](README.md) · **简体中文**
 
-AIPA Hub 1.0.0 为私人 AIPA 助手提供 Web 界面和可选常驻服务。个人知识与对话保存在自己的实例中，你可以选择受支持的模型执行器，通过浏览器访问助手。
+AIPA Hub 1.0.1 为私人 AIPA 助手提供 Web 界面和可选常驻服务。个人知识与对话保存在自己的实例中，你可以选择受支持的模型执行器，通过浏览器访问助手。
 
 ## 功能
 
@@ -113,6 +113,8 @@ display:
 
 在 `user-space/llm-provider.yaml` 设置共享 IANA `time_zone`，例如 `UTC` 或 `America/New_York`。Hub 定时任务与时间显示遵循该值；Hub 单独时区覆盖项应不设置，或与共享值相同。默认时区为 `Asia/Shanghai`。
 
+关闭 `tasks.repo-sync.enabled` 也会阻止日报收尾和补报发起主从 Hub 的 Git 同步。本地报告仍可生成；已有的设备请求历史会保留，不会自动删除或伪造设备回执。
+
 ## 更新
 
 Hub 程序与 Core 分别更新。源码安装流程：
@@ -125,11 +127,11 @@ Hub 程序与 Core 分别更新。源码安装流程：
 
 不要覆盖运行中的安装或删除私人运行状态。不要在私人实例中用 `git pull` 更新 Hub。Core 使用 [Personal 更新指南](https://github.com/StriveJ/artificial-intelligence-personal-agent#update-your-instance)，更新 Core 不会更新 Hub。
 
-本次 1.0.0 提供源码发行。受管安装与回退工具供维护者发布签名不可变包使用；源码标签不提供正式受管签名包，也不自动建立公钥信任。仅当发行提供独立核验的包、公钥指纹和安装说明时才使用受管安装，详见英文[包发布指南](docs/release-process.md)。
+本次 1.0.1 提供源码发行。受管安装与回退工具供维护者发布签名不可变包使用；源码标签不提供正式受管签名包，也不自动建立公钥信任。仅当发行提供独立核验的包、公钥指纹和安装说明时才使用受管安装，详见英文[包发布指南](docs/release-process.md)。
 
 ## 要求与边界
 
-Hub 1.0.0 要求 Node.js ≥24，依赖 `sharp` 0.35.5，主从协议 1，运行格式 schema 1。完整契约见[英文 README](README.md#runtime-contract-and-limits)。Core 能力声明与服务配置共同决定功能，必要上下文或授权不满足时阻止相关操作。
+Hub 1.0.1 要求 Node.js ≥24，依赖 `sharp` 0.35.5，主从协议 1，运行格式 schema 1。完整契约见[英文 README](README.md#runtime-contract-and-limits)。Core 能力声明与服务配置共同决定功能，必要上下文或授权不满足时阻止相关操作。
 
 默认上下文预算是 1 MiB 输入字节，不代表模型 token 窗口。通知指 Hub 持久收件箱，未包含系统推送、邮件和短信。未包含逐 token Web 流式输出、任意 Web 命令执行和远程批量软件升级。详见英文[计划任务和通知指南](docs/pushes.md)。
 

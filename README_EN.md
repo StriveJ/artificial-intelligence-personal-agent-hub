@@ -2,7 +2,7 @@
 
 **English** · [简体中文](README_CN.md)
 
-AIPA Hub 1.0.0 gives your private AIPA assistant a Web interface and an optional always-on service. Keep your knowledge and conversations in your own instance, choose a supported model executor, and access the assistant from your browser.
+AIPA Hub 1.0.1 gives your private AIPA assistant a Web interface and an optional always-on service. Keep your knowledge and conversations in your own instance, choose a supported model executor, and access the assistant from your browser.
 
 ## Features
 
@@ -83,6 +83,8 @@ display:
 
 Set the shared IANA `time_zone` in `user-space/llm-provider.yaml`, such as `UTC` or `America/New_York`. Schedules and displayed timestamps use that zone. Leave Hub timezone overrides unset or identical to the shared value. The default is `Asia/Shanghai`.
 
+Disabling `tasks.repo-sync.enabled` also prevents report closing and backfill from initiating Main/Sub Git synchronization. Local report generation continues. Existing device request history is retained; requests are not silently deleted or acknowledged.
+
 ## Updating
 
 Update Hub software and Core separately. For a source installation:
@@ -95,14 +97,14 @@ Update Hub software and Core separately. For a source installation:
 
 Do not overwrite a running installation or delete private runtime state. Do not run `git pull` in the private instance to update Hub. Update Core through the [Personal update guide](https://github.com/StriveJ/artificial-intelligence-personal-agent#update-your-instance); updating Core does not update Hub.
 
-This 1.0.0 distribution provides source. Managed installation and rollback tools are included for maintainers publishing signed immutable packages. A source tag does not provide a signed managed package or establish a trusted key. Use managed installation only when a release supplies an independently verified package, public-key fingerprint and installation instructions. See [package publishing](docs/release-process.md).
+This 1.0.1 distribution provides source. Managed installation and rollback tools are included for maintainers publishing signed immutable packages. A source tag does not provide a signed managed package or establish a trusted key. Use managed installation only when a release supplies an independently verified package, public-key fingerprint and installation instructions. See [package publishing](docs/release-process.md).
 
 ## Runtime contract and limits
 
 <!-- aipa-support:hub:begin -->
 | Hub contract | Source declaration |
 |---|---|
-| Program version / Node requirement | 1.0.0 / >=24 |
+| Program version / Node requirement | 1.0.1 / >=24 |
 | Package dependencies | sharp 0.35.5 |
 | Main/sub protocol range / Runtime format | 1–1 / schema 1 |
 | Core capabilities required for shared context | context-projection-v1, context-completeness-v1, memory-lifecycle-v1, business-clock-v1, memory-usage-receipts-v1 |

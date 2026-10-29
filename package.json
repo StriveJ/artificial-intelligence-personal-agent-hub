@@ -1,6 +1,6 @@
 {
   "name": "aipa-hub",
-  "version": "1.0.0",
+  "version": "1.0.1",
   "private": true,
   "type": "module",
   "description": "AIPA personal web host with scheduled tasks and proactive pushes",
