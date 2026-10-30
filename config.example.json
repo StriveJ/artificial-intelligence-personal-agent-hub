@@ -2,6 +2,7 @@
   "root": "/absolute/path/to/your-aipa-instance",
   "runtimeDir": "/absolute/path/to/private/aipa-hub-state",
   "engine": "claude",
+  "site": { "icpNumber": "", "footerText": "", "footerLinks": [] },
   "_timeZoneHelp": "Set time_zone in the instance user-space/llm-provider.yaml; daily schedules and UI follow that shared IANA zone. Asia/Shanghai remains the default.",
   "contextBudgetBytes": 1048576,
   "port": 4317,

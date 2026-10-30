@@ -1,41 +1,42 @@
+import { t, getLanguage, setText, setUiAttribute } from './i18n.js';
 const STATUS_LABELS = { started: "In progress", success: "Success", partial: "Partial", blocked: "Needs attention", deferred: "Deferred", unknown: "Outcome needs review", failed: "Failed", error: "Failed", info: "Record" };
 const KIND_LABELS = { task: "Scheduled tasks", device: "Devices", sync: "Sync", system: "System", maintenance: "Maintenance" };
 export function formatStamp(value, timeZone = 'Asia/Shanghai') {
-  const formatter=new Intl.DateTimeFormat('en', { timeZone, year:'numeric', month:'2-digit', day:'2-digit', hour:'2-digit', minute:'2-digit', second:'2-digit', hourCycle:'h23' });
+  const formatter=new Intl.DateTimeFormat(getLanguage(), { timeZone, year:'numeric', month:'2-digit', day:'2-digit', hour:'2-digit', minute:'2-digit', second:'2-digit', hourCycle:'h23' });
   const parts = Object.fromEntries(formatter.formatToParts(new Date(value)).filter(part => part.type !== 'literal').map(part => [part.type, part.value]));
   return `${parts.year}-${parts.month}-${parts.day} ${parts.hour}:${parts.minute}:${parts.second}`;
 }
 const dayKey = (value, zone) => formatStamp(value, zone).slice(0, 10);
-const dayLabel = (value, timeZone) => new Intl.DateTimeFormat('en', { timeZone, year:'numeric', month:'long', day:'numeric', weekday:'long' }).format(new Date(value));
+const dayLabel = (value, timeZone) => new Intl.DateTimeFormat(getLanguage(), { timeZone, year:'numeric', month:'long', day:'numeric', weekday:'long' }).format(new Date(value));
 export function supportSummary(value){
-  if(!value)return 'No framework compatibility check recorded';
-  if(value.core?.program?.status==='restart-required')return 'Framework code has changed. Restart Hub before continuing.';
-  if(value.combination?.status!=='declared')return 'Framework capabilities are not fully verified. Check version compatibility.';
+  if(!value)return t('No framework compatibility check recorded');
+  if(value.core?.program?.status==='restart-required')return t('Framework code has changed. Restart Hub before continuing.');
+  if(value.combination?.status!=='declared')return t('Framework capabilities are not fully verified. Check version compatibility.');
   const labels={required_context_unavailable:'Required rule files are unavailable',required_context_private:'Privacy settings block required rules',required_context_exceeds_budget:'Required rules exceed the context budget',context_privacy_unavailable:'Privacy settings cannot be read',context_contract_unsupported:'Framework integrity checks are unsupported',response_language_unavailable:'Response-language configuration is invalid or unreadable'};
   const context=value.context?.status==='blocked'?(labels[value.context.code]||"Rule check failed"):value.context?.status==='checked'?'Latest rule check in this process passed':'Response rules have not been checked in this process';
-  return `Core ${value.core?.version||"Unknown"} / Hub ${value.hub?.version||"Unknown"} · ${context}`;
+  return t('Core {0} / Hub {1} · {2}', value.core?.version||t('Unknown'), value.hub?.version||t('Unknown'), t(context));
 }
 export const duration = ms => {
   if (!Number.isFinite(ms) || ms < 0) return '—';
   const minutes = Math.floor(ms / 60_000);
-  if (minutes < 1) return 'Less than 1 minute';
-  if (minutes < 60) return `${minutes} minutes`;
+  if (minutes < 1) return t('Less than 1 minute');
+  if (minutes < 60) return t('{0} minutes', minutes);
   const hours = Math.floor(minutes / 60), rest = minutes % 60;
-  if (hours < 24) return rest ? `${hours} hours ${rest} minutes` : `${hours} hours`;
-  return `${Math.floor(hours / 24)} days ${hours % 24} hours`;
+  if (hours < 24) return rest ? t('{0} hours {1} minutes', hours, rest) : t('{0} hours', hours);
+  return t('{0} days {1} hours', Math.floor(hours / 24), hours % 24);
 };
 
 export function createDeviceList({ container, formatDate }) {
   const doc = container.ownerDocument, cards = new Map();
-  const el = (tag, className, value) => { const node = doc.createElement(tag); if (className) node.className = className; if (value !== undefined) node.textContent = value; return node; };
-  const text = (node, value) => { if (node.textContent !== value) node.textContent = value; };
+  const el = (tag, className, value) => { const node = doc.createElement(tag); if (className) node.className = className; if (value !== undefined) setText(node, value); return node; };
+  const text = (node, value) => { if (node.textContent !== value) setText(node, value); };
   function create(device) {
     const card = el('article', 'device-card'), head = el('div', 'device-head');
     const dot = el('span', 'status-dot'), name = el('h3'), badge = el('span', 'device-badge');
     head.append(dot, name, badge);
     const role = el('p', 'device-role');
     const facts = el('dl', 'device-facts'), values = {};
-    for (const key of ["Status", "Version", "Framework status", "Platform", "Uptime", "Last heartbeat", "Last sync", "Next task"]) { const dd = el('dd'); values[key] = dd; facts.append(el('dt', '', key), dd); }
+    for (const key of ["Status", "Version", "Framework status", "Platform", "Uptime", "Last heartbeat", "Last sync", "Next task"]) { const dd = el('dd'); values[key] = dd; facts.append(el('dt', '', () => t(key)), dd); }
     card.append(head, role, facts);
     container.append(card);
     const entry = { card, dot, name, badge, role, values, signature: '' };
@@ -54,22 +55,22 @@ export function createDeviceList({ container, formatDate }) {
       const degraded = device.protocolCompatible === false;
       const statusKey = device.status !== 'online' ? 'offline' : maintenance ? 'maintenance' : degraded ? 'degraded' : 'online';
       entry.dot.className = `status-dot status-${statusKey}`;
-      text(entry.name, device.id);
-      text(entry.badge, statusKey === 'online' ? "Online" : statusKey === 'offline' ? "Offline" : statusKey === 'maintenance' ? "Under maintenance" : "Protocol incompatible");
+      text(entry.name, () => (device.id));
+      text(entry.badge, () => ((statusKey === 'online' ? t("Online") : (statusKey === 'offline' ? t("Offline") : (statusKey === 'maintenance' ? t("Under maintenance") : t("Protocol incompatible"))))));
       entry.badge.className = `device-badge device-${statusKey}`;
-      text(entry.role, device.role === 'main' ? `Main Hub · ${device.label} · Management port ${device.endpoints?.port ?? '—'}${device.endpoints?.publicPort ? ` / public ${device.endpoints.publicPort}` : ''}` : `Sub Hub · Instance task ${device.taskBusy ? "active (sync deferred)" : "Idle"}`);
-      const values = {
-        "Status": statusKey === 'online' ? "Online" + (device.idle === false ? " (busy)" : device.idle === true ? " (idle)" : '')
-          : statusKey === 'offline' ? "Offline" : statusKey === 'maintenance' ? 'Under maintenance; not accepting new tasks' : 'Online, but protocol incompatible; no tasks dispatched',
-        "Version": `${device.releaseId || "Unknown"}${device.testMode ? " · Test mode" : ''}${device.deploymentGeneration ? ` · Generation ${device.deploymentGeneration}` : ''}`,
-        "Framework status":device.role==='main'?supportSummary(device.diagnostics):'Sub Hub has not reported Core diagnostics; protocol status is shown separately',
+      text(entry.role, () => ((device.role === 'main' ? t("Main Hub · {0} · Management port {1}{2}", device.label, (device.endpoints?.port ?? '—'), (device.endpoints?.publicPort ? t(" / public {0}", device.endpoints.publicPort) : '')) : t("Sub Hub · Instance task {0}", (device.taskBusy ? t("active (sync deferred)") : t("Idle"))))));
+      const values = () => ({
+        "Status": statusKey === 'online' ? t('Online') + (device.idle === false ? t(' (busy)') : device.idle === true ? t(' (idle)') : '')
+          : statusKey === 'offline' ? t('Offline') : statusKey === 'maintenance' ? t('Under maintenance; not accepting new tasks') : t('Online, but protocol incompatible; no tasks dispatched'),
+        "Version": `${device.releaseId || t('Unknown')}${device.testMode ? t(' · Test mode') : ''}${device.deploymentGeneration ? t(' · Generation {0}', device.deploymentGeneration) : ''}`,
+        "Framework status":device.role==='main'?supportSummary(device.diagnostics):t('Sub Hub has not reported Core diagnostics; protocol status is shown separately'),
         "Platform": device.host ? `${device.host.name} · ${device.host.platform}/${device.host.arch} · Node ${device.host.node}` : `${device.platform || "Unknown"}/${device.arch || ''}`,
         "Uptime": device.uptimeMs !== undefined ? duration(device.uptimeMs) : '—',
-        "Last heartbeat": device.lastSeen ? formatDate(device.lastSeen) : device.role === 'main' ? "Local process" : "No records yet",
-        "Last sync": device.sync ? `${device.sync.code || device.sync.status || "Recorded"}${device.sync.commit ? ` · ${device.sync.commit}` : ''}${device.sync.pushed ? " · Pushed" : device.sync.pushSuppressed ? " · Push suppressed in test mode" : ''}` : device.role === 'main' ? "Performed by scheduled tasks" : "No synchronization result yet",
-        "Next task": device.role === 'main' && nextTask ? `${nextTask.label} · ${formatDate(nextTask.nextRunAt)}` : device.role === 'main' ? 'No scheduled tasks' : "Dispatched by main Hub",
-      };
-      for (const [key, value] of Object.entries(values)) text(entry.values[key], value);
+        "Last heartbeat": device.lastSeen ? formatDate(device.lastSeen) : device.role === 'main' ? t('Local process') : t('No records yet'),
+        "Last sync": device.sync ? `${device.sync.code || device.sync.status || t('Recorded')}${device.sync.commit ? ` · ${device.sync.commit}` : ''}${device.sync.pushed ? t(' · Pushed') : device.sync.pushSuppressed ? t(' · Push suppressed in test mode') : ''}` : device.role === 'main' ? t('Performed by scheduled tasks') : t('No synchronization result yet'),
+        "Next task": device.role === 'main' && nextTask ? `${t(nextTask.label)} · ${formatDate(nextTask.nextRunAt)}` : device.role === 'main' ? t('No scheduled tasks') : t('Dispatched by main Hub'),
+      });
+      for (const key of Object.keys(values())) text(entry.values[key], () => values()[key]);
     }
   };
 }
@@ -81,7 +82,7 @@ export function visibleActivity(all) {
 
 export function createActivityTimeline({ container, empty, formatDate, timeZone=()=> 'Asia/Shanghai' }) {
   const doc = container.ownerDocument, nodes = new Map();
-  const el = (tag, className, value) => { const node = doc.createElement(tag); if (className) node.className = className; if (value !== undefined) node.textContent = value; return node; };
+  const el = (tag, className, value) => { const node = doc.createElement(tag); if (className) node.className = className; if (value !== undefined) setText(node, value); return node; };
   function render(all) {
     const items = visibleActivity(all);
     empty.hidden = items.length > 0;
@@ -96,22 +97,22 @@ export function createActivityTimeline({ container, empty, formatDate, timeZone=
         nodes.set(item.id, node);
       }
       node.dataset.kind = item.kind; node.dataset.status = item.status;
-      node.querySelector('.activity-time').textContent = `[${formatStamp(item.at,timeZone())}]`;
+      setText(node.querySelector('.activity-time'), () => (t("[{0}]", formatStamp(item.at,timeZone()))));
       node.querySelector('.activity-time').dateTime = item.at;
       node.querySelector('.activity-dot').className = `activity-dot activity-${item.status}`;
-      node.querySelector('.activity-kind').textContent = KIND_LABELS[item.kind] || item.kind;
-      node.querySelector('.activity-text').textContent = item.summary;
+      setText(node.querySelector('.activity-kind'), () => ((t(KIND_LABELS[item.kind]) || item.kind)));
+      setText(node.querySelector('.activity-text'), () => (item.summary));
       const detail = [];
       if (item.detail?.changedFiles !== undefined) detail.push(`Changed ${item.detail.changedFiles} files`);
       if (item.detail?.commit) detail.push(`Commit ${item.detail.commit}`);
       if (item.detail?.pushed === true) detail.push("Pushed");
       if (item.detail?.durationMs !== undefined) detail.push(`Duration ${Math.max(1, Math.round(item.detail.durationMs / 1000))} seconds`);
       const detailNode = node.querySelector('.activity-detail');
-      detailNode.textContent = detail.length ? `${STATUS_LABELS[item.status] || item.status} · ${detail.join(' · ')}` : STATUS_LABELS[item.status] || item.status;
+      setText(detailNode, () => ((detail.length ? t("{0} · {1}", (t(STATUS_LABELS[item.status]) || item.status), detail.join(' · ')) : (t(STATUS_LABELS[item.status]) || item.status))));
       const current = container.children[index];
       if (current !== node) container.insertBefore(node, current || null);
       const day = dayKey(item.at,timeZone());
-      if (day !== previousDay) { previousDay = day; node.dataset.dayStart = day; node.title = dayLabel(item.at,timeZone()); }
+      if (day !== previousDay) { previousDay = day; node.dataset.dayStart = day; setUiAttribute(node, 'title', () => (dayLabel(item.at,timeZone()))); }
       else delete node.dataset.dayStart;
     });
   }
@@ -126,22 +127,22 @@ export function recoveryItems(main){
 export function createRecoveryPanel({container,request,refresh,notify}){
  if(!container)return ()=>{};
  const pending=new Set(),doc=container.ownerDocument;
- const node=(tag,text)=>{const el=doc.createElement(tag);if(text!==undefined)el.textContent=text;return el;};
+ const node=(tag,text)=>{const el=doc.createElement(tag);if(text!==undefined)setText(el, text);return el;};
  return main=>{
   container.replaceChildren();const items=recoveryItems(main);
-  if(!items.length){container.append(node('p',main.capabilities?.distillationPhases===1?'No reports or distillation jobs need recovery.':'This service does not provide recovery details yet. Update it to view them.'));return;}
+  if(!items.length){container.append(node('p', () => ((main.capabilities?.distillationPhases===1 ? t('No reports or distillation jobs need recovery.') : t('This service does not provide recovery details yet. Update it to view them.')))));return;}
   for(const item of items){
-   const row=node('article');row.className='note-card';row.append(node('h4',item.label),node('p',item.detail));
-   for(const phase of item.phases||[])row.append(node('p',`${phase.id}: ${phase.phase}${phase.queueId?" · Candidate "+phase.queueId:''}`));
+   const row=node('article');row.className='note-card';row.append(node('h4', () => (item.label)),node('p', () => (item.detail)));
+   for(const phase of item.phases||[])row.append(node('p', () => (t("{0}: {1}{2}", phase.id, phase.phase, (phase.queueId ? t('{0}{1}', t(" · Candidate "), phase.queueId) : '')))));
    if(item.retry){
-    const button=node('button','Retry only this report');button.type='button';button.className='text-button';button.disabled=pending.has(item.id);
+    const button=node('button', () => (t('Retry only this report')));button.type='button';button.className='text-button';button.disabled=pending.has(item.id);
     button.onclick=async()=>{
       if(pending.has(item.id))return;pending.add(item.id);button.disabled=true;
       try{const result=await request(item.id);notify(result.summary);}catch(error){notify(error.message);}
       finally{pending.delete(item.id);button.disabled=false;try{await refresh();}catch(error){notify(error.message);}}
     };
     row.append(button);
-   }else if(item.report)row.append(node('p','This service version does not support retrying from the page. Update it to enable this action.'));
+   }else if(item.report)row.append(node('p', () => (t('This service version does not support retrying from the page. Update it to enable this action.'))));
    container.append(row);
   }
  };

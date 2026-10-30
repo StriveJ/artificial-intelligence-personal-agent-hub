@@ -66,3 +66,22 @@
 .conflict-review label{display:flex;align-items:flex-start;gap:8px;font-size:13px;line-height:1.6}
 .conflict-review input[type=checkbox]{flex:0 0 auto;margin-top:4px}
 .conflict-review button{justify-self:start;max-width:100%;white-space:normal;overflow-wrap:anywhere}
+body:has(>.site-footer:not([hidden])){display:flex;flex-direction:column;min-height:100dvh}
+.site-footer{flex-shrink:0;margin-top:auto;padding:14px 20px calc(14px + env(safe-area-inset-bottom));text-align:center;border-top:1px solid var(--line);background:var(--bg);color:var(--green);font-size:12px;line-height:1.8;overflow-wrap:anywhere}
+.site-footer a{display:inline-flex;align-items:center;justify-content:center;min-height:44px;max-width:100%;text-decoration:underline;text-underline-offset:3px}
+.site-footer-text{max-width:900px;margin:0 auto 4px;white-space:pre-line}
+.site-footer-links{display:flex;align-items:center;justify-content:center;flex-wrap:wrap;column-gap:20px;row-gap:0}
+body:has(>.site-footer:not([hidden])) .login-shell{min-height:calc(100dvh - 80px)}
+.site-settings fieldset{border:0;padding:0;margin:12px 0;min-width:0}
+.site-settings label{display:block;margin-bottom:8px;font-size:13px}
+.site-settings input,.site-settings textarea{display:block;width:100%;max-width:640px;min-height:44px;padding:10px 12px;border:1px solid var(--line);border-radius:8px;background:var(--paper)}
+.site-settings textarea{resize:vertical}
+.site-footer-link-editor{display:grid;gap:10px;margin-top:12px}
+.footer-link-row{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,2fr) auto;gap:10px;align-items:end;border-bottom:1px solid var(--line);padding-bottom:8px}
+.footer-link-row .text-button{margin:0 0 8px;min-height:44px}
+@media(max-width:540px){.footer-link-row{grid-template-columns:minmax(0,1fr)}.footer-link-row .text-button{justify-self:start}}
+@media(max-width:760px){#app:not([hidden])~.site-footer{padding-bottom:calc(90px + env(safe-area-inset-bottom))}}
+
+/* Language controls stay available before sign-in and on small screens. */
+.language-switcher{display:inline-flex;align-items:center;gap:8px;color:var(--muted);font-size:12px;flex-shrink:0}.language-switcher select{font:inherit;color:var(--ink);background:var(--paper);border:1px solid var(--line);border-radius:8px;min-height:34px;max-width:150px;padding:5px 8px}.login-card .login-language{display:flex;justify-content:flex-end;margin:0 0 22px}.login-card .login-language select{max-width:160px}.topbar-language select{max-width:140px}@media(max-width:760px){.topbar{gap:7px;padding-left:12px;padding-right:12px}.topbar-language select{max-width:100px;font-size:11px;padding:5px}.topbar .status-pill{padding:6px;font-size:9px}}
+@media(max-width:480px){.topbar .status-pill{gap:0}.topbar #connection-status{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0,0,0,0);white-space:nowrap}}@media(max-width:360px){.topbar .mobile-brand strong{display:none}}

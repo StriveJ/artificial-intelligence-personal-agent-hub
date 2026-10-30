@@ -5,7 +5,24 @@ import {resolve,join,sep} from 'node:path';
 import {fileURLToPath} from 'node:url';
 import {execFileSync,spawnSync} from 'node:child_process';
 import {generateKeyPairSync} from 'node:crypto';
-import {verifyRelease} from '../lib/release-package.mjs';
+import {verifyRelease,buildReleasePayload} from '../lib/release-package.mjs';
+import {posix} from 'node:path';
+
+test('Runtime release payload includes all static program imports and the locale registry while excluding development tools',()=>{
+ const source=resolve('.'),payload=buildReleasePayload({source,manifest:{}}),paths=new Set(Object.keys(payload.contents));
+ for(const path of ['public/i18n.js','public/languages.js','public/locales/en.js','public/locales/zh-CN.js','lib/site-settings.mjs','lib/ui-locale-validation.mjs'])assert.ok(paths.has(path),path);
+ for(const path of ['config.main.example.json','aipa-test-tmp','scripts/ui-locales.mjs'])assert.equal(paths.has(path),false,path);
+ const modules=Object.fromEntries([...paths].filter(path=>/\.(?:mjs|js)$/.test(path)).map(path=>[path,Buffer.from(payload.contents[path],'base64').toString('utf8')]));
+ const parsed=spawnSync(process.execPath,['--experimental-vm-modules','--input-type=module','-e',"import {SourceTextModule} from 'node:vm'; let input=''; for await(const chunk of process.stdin)input+=chunk; console.log(JSON.stringify(Object.fromEntries(Object.entries(JSON.parse(input)).map(([path,source])=>[path,new SourceTextModule(source).dependencySpecifiers]))));"],{input:JSON.stringify(modules),encoding:'utf8',windowsHide:true});
+ assert.equal(parsed.status,0,parsed.stderr);
+ for(const [path,imports] of Object.entries(JSON.parse(parsed.stdout))){
+  for(const specifier of imports){
+   if(!specifier.startsWith('.'))continue;
+   const target=posix.resolve('/',posix.dirname(path),specifier).slice(1);
+   assert.ok(paths.has(target),`${path} imports ${target}, which must exist in the runtime package`);
+  }
+ }
+});
 
 test("Release CLI declares accepted Windows/Linux x64 only, binds source commits, and rejects dirty source",t=>{
   const parent=resolve('aipa-test-tmp');mkdirSync(parent,{recursive:true});
