@@ -1,3 +1,4 @@
+import { t, setText, setUiAttribute, localizedText } from './i18n.js';
 export const NAV_ITEMS = Object.freeze([
   { id: 'chat', label: "Chat", short: "Chat", icon: '◌' },
   { id: 'notes', label: "Notes", short: "Notes", icon: '✎' },
@@ -18,27 +19,27 @@ export function createNavigation({ onNavigate, onConnect, notify }) {
   try { const saved = localStorage.getItem('aipa-bottom-nav-v1'); pins = saved === null ? [...DEFAULT_PINS] : normalisePins(JSON.parse(saved)); }
   catch { pins = [...DEFAULT_PINS]; }
   let active = 'chat', unread = 0;
-  const el = (tag, className, value) => { const node = document.createElement(tag); if (className) node.className = className; if (value !== undefined) node.textContent = value; return node; };
+  const el = (tag, className, value) => { const node = document.createElement(tag); if (className) node.className = className; if (value !== undefined) setText(node, value); return node; };
   function activate(id) { drawer.close(); if (id === 'connect') onConnect(); else onNavigate(id); }
   function itemButton(item, compact = false) {
     const button = el('button', compact ? 'bottom-shortcut' : 'nav-button'); button.type = 'button';
     button.dataset.nav = item.id; button.classList.toggle('active', active === item.id);
     if (active === item.id) button.setAttribute('aria-current', 'page');
-    const icon = el('span', 'nav-icon', item.icon); icon.setAttribute('aria-hidden', 'true');
-    button.append(icon, document.createTextNode(compact ? item.short : item.label));
-    if (item.id === 'pushes') { const badge = el('small', 'push-badge'); badge.hidden = !unread; badge.textContent = unread > 9 ? '9+' : String(unread); button.append(badge); }
+    const icon = el('span', 'nav-icon', () => (item.icon)); icon.setAttribute('aria-hidden', 'true');
+    button.append(icon, localizedText(() => ((compact ? t(item.short) : t(item.label)))));
+    if (item.id === 'pushes') { const badge = el('small', 'push-badge'); badge.hidden = !unread; setText(badge, () => ((unread > 9 ? '9+' : String(unread)))); button.append(badge); }
     button.onclick = () => activate(item.id); return button;
   }
   function pinButton(item) {
-    const pinned = pins.includes(item.id), button = el('button', 'pin-button', pinned ? "✓ Pinned" : "＋ Pin");
+    const pinned = pins.includes(item.id), button = el('button', 'pin-button', () => ((pinned ? t("✓ Pinned") : t("＋ Pin"))));
     button.type = 'button'; button.setAttribute('aria-pressed', String(pinned));
-    button.setAttribute('aria-label', `${pinned ? "Remove from bottom" : "Add to bottom"}${item.label}`);
-    button.title = pinned ? 'Remove from bottom navigation' : 'Add to bottom navigation';
+    setUiAttribute(button, 'aria-label', () => (t("{0}{1}", (pinned ? t("Remove from bottom") : t("Add to bottom")), ' ' + t(item.label))));
+    setUiAttribute(button, 'title', () => ((pinned ? t('Remove from bottom navigation') : t('Add to bottom navigation'))));
     button.onclick = () => {
       const originNav = button.closest('nav')?.id;
       pins = pinned ? pins.filter(id => id !== item.id) : [...pins, item.id];
       let saved = true; try { localStorage.setItem('aipa-bottom-nav-v1', JSON.stringify(pins)); } catch { saved = false; }
-      render(); notify(saved ? 'Bottom navigation saved in this browser' : 'Layout updated; this browser does not allow saving preferences');
+      render(); notify((saved ? t('Bottom navigation saved in this browser') : t('Layout updated; this browser does not allow saving preferences')));
       const replacement = [...document.querySelectorAll('.pin-button')].find(b => b.closest('nav')?.id === originNav && b.dataset.pin === item.id);
       replacement?.focus();
     };
@@ -70,7 +71,7 @@ export function createNavigation({ onNavigate, onConnect, notify }) {
     },
     setUnread(count) {
       unread = count;
-      for (const badge of document.querySelectorAll('.push-badge')) { badge.hidden = !count; badge.textContent = count > 9 ? '9+' : String(count); }
+      for (const badge of document.querySelectorAll('.push-badge')) { badge.hidden = !count; setText(badge, () => ((count > 9 ? '9+' : String(count)))); }
     },
   };
 }

@@ -54,7 +54,8 @@ test("Concurrent cross-device decisions remain pending; keeping the current vers
  const decision=await review.decide(f.id,{id:randomUUID(),path:f.path,revision:entry.revision,choice:'current',reason:'Synthetic reconciliation',confirmed:true});assert.equal(decision.supersedes.length,2);assert.equal(review.detail(f.id).status,'resolved');assert.equal(readdirSync(join(f.dir,'decisions')).length,3);
 });
 class Element{
- constructor(tag,doc){this.tag=tag;this.ownerDocument=doc;this.children=[];this.textContent='';this.value='';}
+ constructor(tag,doc){this.tag=tag;this.ownerDocument=doc;this.children=[];this.textContent='';this.value='';this.attributes=new Map();}
+ getAttribute(name){return this.attributes.get(name)??null;}setAttribute(name,value){this.attributes.set(name,value);}
  append(...items){this.children.push(...items);}prepend(...items){this.children.unshift(...items);}replaceChildren(...items){this.children=items;}
 }
 test("Decision UI shows both versions and reuses an operation ID for confirmation, recovery, and repeated clicks",async()=>{

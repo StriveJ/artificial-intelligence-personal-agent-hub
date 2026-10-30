@@ -2,7 +2,7 @@
 
 **English** · [简体中文](README_CN.md)
 
-AIPA Hub 1.0.1 gives your private AIPA assistant a Web interface and an optional always-on service. Keep your knowledge and conversations in your own instance, choose a supported model executor, and access the assistant from your browser.
+AIPA Hub 1.1.0 gives your private AIPA assistant a Web interface and an optional always-on service. Keep your knowledge and conversations in your own instance, choose a supported model executor, and access the assistant from your browser.
 
 ## Features
 
@@ -12,9 +12,9 @@ AIPA Hub 1.0.1 gives your private AIPA assistant a Web interface and an optional
 - Create and review agenda items, daily reports and optional news briefings in the instance timezone.
 - Review proposed memory changes and recover interrupted operations without silently repeating model requests.
 - Connect an optional Sub Hub on another computer and synchronize the private instance through its own Git repository.
-- Inspect service status, task activity, conflicts and recovery actions from the English Web interface.
+- Inspect service status, task activity, conflicts and recovery actions from the English or Simplified Chinese Web interface.
 
-The interface, source and command-line messages are English. Model replies can follow the user's language. Actual model, image and language support depends on your executor and provider.
+The interface supports English and Simplified Chinese. Source and command-line messages are English. Model replies can follow the user's language. Actual model, image and language support depends on your executor and provider.
 
 ## Repositories
 
@@ -56,6 +56,12 @@ The example listens at `http://127.0.0.1:14327`. Open it locally to sign in and 
 
 Use an HTTPS reverse proxy or tunnel. Configure both `publicPort` (a separate loopback listener for the proxy) and `publicOrigins` (the exact allowed HTTPS origins) in the private Main configuration. Route the proxy to `publicPort`, not the local administrative listener. Retrieve the pairing code from the local page or SSH local forwarding; remote clients must pair. Keep the local administrative listener private. A tunnel alone does not authenticate Hub users.
 
+### Website footer and legal information
+
+Under **Scheduled tasks > Website footer and legal information**, configure an optional Chinese ICP number, public footer text, and up to eight legal links. A Chinese ICP number links to `https://beian.miit.gov.cn/`; other deployments can provide Privacy Policy, Terms, Legal Notice, Impressum or other regional links, with or without ICP information. The configured content is shown consistently to all visitors, before and after sign-in, including without JavaScript.
+
+The default private configuration interface is `"site": { "icpNumber": "", "footerText": "", "footerLinks": [] }`. Each link has a `label` and a credential-free HTTPS `url` or same-site path starting with a single `/`. Supply real destination pages during deployment; Hub does not generate policy pages or validate registrations. Empty items are hidden. Web edits take precedence and persist in device-local `site-settings.json`. Existing ICP-only settings remain compatible. Keep deployment numbers and legal information in private configuration, outside public source, and choose applicable content for the operator and business.
+
 ### Optional Sub Hub
 
 Install the same source on the other computer, prepare a separate checkout of the private instance, and copy `config.sub.example.json` to a private directory. Enroll the device in Main's Devices page and fill in `mainUrl`, `nodeId`, `installationId` and its device `token`. Set separate absolute instance/runtime paths and the locally available executor. For a real instance, set `testMode: false` before starting:
@@ -71,6 +77,10 @@ Managed lifecycle ownership is configured separately: a managed installer create
 Never commit real configuration, device tokens, model credentials, pairing records, runtime files or signing private keys.
 
 ## Language and timezone
+
+The default table `public/locales/en.js` lists all registered interface messages. Add languages from this table and the single `public/languages.js` registry, without editing pages. See [translation maintenance](docs/localization.md).
+
+Choose **Interface language** on the sign-in page or in the top bar. **Browser default**, **Chinese**, and **English** are available. Switching is immediate, preserves drafts, and saves the choice in the current browser. It does not translate user content, custom footer information, or change the model response language. Technical server diagnostics may remain in English.
 
 In the private instance's `user-space/overrides.yaml`:
 
@@ -97,14 +107,14 @@ Update Hub software and Core separately. For a source installation:
 
 Do not overwrite a running installation or delete private runtime state. Do not run `git pull` in the private instance to update Hub. Update Core through the [Personal update guide](https://github.com/StriveJ/artificial-intelligence-personal-agent#update-your-instance); updating Core does not update Hub.
 
-This 1.0.1 distribution provides source. Managed installation and rollback tools are included for maintainers publishing signed immutable packages. A source tag does not provide a signed managed package or establish a trusted key. Use managed installation only when a release supplies an independently verified package, public-key fingerprint and installation instructions. See [package publishing](docs/release-process.md).
+This 1.1.0 distribution provides source. Managed installation and rollback tools are included for maintainers publishing signed immutable packages. A source tag does not provide a signed managed package or establish a trusted key. Use managed installation only when a release supplies an independently verified package, public-key fingerprint and installation instructions. See [package publishing](docs/release-process.md).
 
 ## Runtime contract and limits
 
 <!-- aipa-support:hub:begin -->
 | Hub contract | Source declaration |
 |---|---|
-| Program version / Node requirement | 1.0.1 / >=24 |
+| Program version / Node requirement | 1.1.0 / >=24 |
 | Package dependencies | sharp 0.35.5 |
 | Main/sub protocol range / Runtime format | 1–1 / schema 1 |
 | Core capabilities required for shared context | context-projection-v1, context-completeness-v1, memory-lifecycle-v1, business-clock-v1, memory-usage-receipts-v1 |

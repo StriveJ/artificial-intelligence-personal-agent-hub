@@ -19,6 +19,7 @@
 <body>
   <section id="login" class="login-shell" hidden>
     <form id="login-form" class="login-card">
+      <label class="language-switcher login-language"><span>Interface language</span><select data-language-select aria-label="Interface language"><option value="auto">Browser default</option></select></label>
       <img class="brand-icon" src="/icon.svg" alt="AIPA">
       <p class="eyebrow">YOUR PERSONAL AGENT</p>
       <h1>Connect to your AIPA</h1>
@@ -45,6 +46,7 @@
         <div class="mobile-brand"><img src="/icon.svg" alt=""><strong>AIPA</strong></div>
         <div class="topbar-label" id="view-label">Chat</div>
         <div class="status-pill"><span class="online-dot"></span><span id="connection-status">Connected</span></div>
+        <label class="language-switcher topbar-language"><span class="sr-only">Interface language</span><select data-language-select aria-label="Interface language"><option value="auto">Browser default</option></select></label>
         <button id="mobile-history" class="icon-button mobile-only" aria-label="Conversation history" title="Conversation history">◷</button>
         <button id="mobile-new-chat" class="icon-button mobile-only" aria-label="New conversation">＋</button>
       </header>
@@ -117,6 +119,22 @@
       <section id="tasks-view" class="view content-view" hidden>
         <div class="section-intro"><p class="eyebrow">KEEP THINGS UP TO DATE</p><h1>Stay up to date, on schedule.</h1><p class="muted">Tasks run automatically while the Hub device is online. Review results or run one now.</p></div>
         <div id="tasks-list" aria-live="polite"></div>
+        <details class="push-settings site-settings"><summary>Website footer and legal information</summary>
+          <form id="site-settings-form">
+            <fieldset id="site-settings-fields" disabled>
+            <label for="site-icp-number">ICP filing number (public)</label>
+            <input id="site-icp-number" name="icpNumber" type="text" maxlength="80" autocomplete="off" aria-describedby="site-filing-help">
+            <p id="site-filing-help" class="muted">For a website with a Chinese ICP filing, enter its complete number, including the website suffix. It links to the MIIT filing system. Leave blank when it does not apply.</p>
+            <label for="site-footer-text">Public footer text (optional)</label>
+            <textarea id="site-footer-text" maxlength="500" rows="3" aria-describedby="site-footer-help"></textarea>
+            <p id="site-footer-help" class="muted">Configure the information applicable to your deployment, such as an operator notice, Privacy Policy, Terms or Legal Notice. Links must point to pages you provide. All configured footer information is public and visible before sign-in.</p>
+            <div id="site-footer-link-editor" class="site-footer-link-editor" aria-label="Legal links"></div>
+            <button id="site-add-footer-link" type="button" class="text-button">Add legal link</button>
+            <button class="primary" type="submit">Save website footer</button>
+            </fieldset>
+            <p id="site-settings-status" class="muted" role="status"></p>
+          </form>
+        </details>
           <section id="main-management" hidden>
             <div class="list-heading"><h2>Main Hub and devices</h2><button id="refresh-nodes" class="text-button">Refresh</button></div>
             <p id="main-mode" class="muted"></p>
@@ -194,6 +212,7 @@
   <dialog id="sidebar-dialog" class="sidebar-drawer" aria-label="Sidebar"><form method="dialog"><button class="dialog-close" aria-label="Close sidebar">×</button></form><div class="drawer-brand"><img src="/icon.svg" alt=""><strong>AIPA</strong></div><p class="eyebrow">All features</p><nav id="drawer-navigation" aria-label="Sidebar navigation"></nav><p class="navigation-help">Pin frequently used features to the bottom navigation. Click again to unpin. The layout is stored in this browser.</p><button id="drawer-history" class="drawer-history">◷ Conversation history and hidden chats</button></dialog>
   <dialog id="history-dialog" class="connection-dialog"><form method="dialog"><button class="dialog-close" aria-label="Close conversation history">×</button></form><h2>Conversation history</h2><div class="history-tabs" role="tablist" aria-label="Conversation list"><button id="history-visible" role="tab" aria-selected="true">Conversation history</button><button id="history-hidden" role="tab" aria-selected="false">Hidden</button></div><p class="history-help">Hide from list changes only this web view. Original conversations, events, and repository data remain available. Restore chats from Hidden.</p><div id="mobile-chat-list" class="chat-list history-list"></div></dialog>
   <dialog id="connection-dialog" class="connection-dialog"><form method="dialog"><button class="dialog-close" aria-label="Close">×</button></form><p class="eyebrow">STAY CONNECTED</p><h2>Take AIPA with you</h2><p id="phone-help" class="muted"></p><div id="pairing-details" hidden><label>Phone access URL</label><p id="remote-url" class="code-value"></p><label>Pairing code</label><p id="pairing-value" class="code-value"></p><button id="copy-pairing" class="primary">Copy pairing code</button></div><button id="logout" class="text-button">Sign out this device</button></dialog>
+  <footer id="site-footer" class="site-footer" hidden><!-- site-footer --></footer>
   <div id="toast" class="toast" role="status" hidden></div>
 </body>
 </html>

@@ -1,6 +1,6 @@
 {
   "name": "aipa-hub",
-  "version": "1.0.1",
+  "version": "1.1.0",
   "private": true,
   "type": "module",
   "description": "AIPA personal web host with scheduled tasks and proactive pushes",
@@ -10,6 +10,8 @@
   "scripts": {
     "start": "node server.mjs",
     "test": "node --test tests/*.test.mjs",
+    "i18n:check": "node scripts/ui-locales.mjs check",
+    "i18n:new": "node scripts/ui-locales.mjs template",
     "start:main": "node main-server.mjs",
     "start:sub": "node sub-server.mjs",
     "preview:markdown": "node tests/preview-markdown.mjs"

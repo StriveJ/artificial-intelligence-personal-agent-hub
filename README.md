@@ -2,7 +2,7 @@
 
 **English** · [简体中文](README_CN.md)
 
-AIPA Hub 1.0.1 gives your private AIPA assistant a Web interface and an optional always-on service. Keep your knowledge and conversations in your own instance, choose a supported model executor, and access the assistant from your browser.
+AIPA Hub 1.1.0 gives your private AIPA assistant a Web interface and an optional always-on service. Keep your knowledge and conversations in your own instance, choose a supported model executor, and access the assistant from your browser.
 
 ## Features
 
@@ -12,9 +12,9 @@ AIPA Hub 1.0.1 gives your private AIPA assistant a Web interface and an optional
 - Create and review agenda items, daily reports and optional news briefings in the instance timezone.
 - Review proposed memory changes and recover interrupted operations without silently repeating model requests.
 - Connect an optional Sub Hub on another computer and synchronize the private instance through its own Git repository.
-- Inspect service status, task activity, conflicts and recovery actions from the English Web interface.
+- Inspect service status, task activity, conflicts and recovery actions from the English or Simplified Chinese Web interface.
 
-The interface, source and command-line messages are English. Model replies can follow the user's language. Actual model, image and language support depends on your executor and provider.
+The interface supports English and Simplified Chinese. Source and command-line messages are English. Model replies can follow the user's language. Actual model, image and language support depends on your executor and provider.
 
 ## Web interface
 
@@ -86,6 +86,22 @@ The example listens at `http://127.0.0.1:14327`. Open it locally to sign in and 
 
 Use an HTTPS reverse proxy or tunnel. Configure both `publicPort` (a separate loopback listener for the proxy) and `publicOrigins` (the exact allowed HTTPS origins) in the private Main configuration. Route the proxy to `publicPort`, not the local administrative listener. Retrieve the pairing code from the local page or SSH local forwarding; remote clients must pair. Keep the local administrative listener private. A tunnel alone does not authenticate Hub users.
 
+### Website footer and legal information
+
+Under **Scheduled tasks > Website footer and legal information**, configure the public information applicable to your deployment. An optional Chinese ICP number links to `https://beian.miit.gov.cn/`. Deployments can also display public operator text and links to Privacy Policy, Terms, Legal Notice, Impressum or other regulatory information. ICP and general legal information can appear together.
+
+An initial value can also be set in the private Main or standalone configuration:
+
+```json
+"site": { "icpNumber": "", "footerText": "", "footerLinks": [] }
+```
+
+Each `footerLinks` entry has a `label` and `url`; up to eight links are supported. Use a credential-free HTTPS URL or a same-site path beginning with a single `/`. Destination pages must be provided by the deployment; Hub renders the links without generating legal policies or checking registration status. Plain footer text supports line breaks, without HTML.
+
+The footer is rendered before sign-in, including when JavaScript is disabled. Web saves update it immediately and persist in device-local `site-settings.json`, overriding initial private configuration. Empty fields hide their corresponding items; an entirely empty configuration hides the footer. Existing ICP-only settings remain compatible. Mobile layouts reserve space above bottom navigation.
+
+Choose the content according to the operator's applicable regional and business requirements. The configured footer is shown consistently to all visitors. Actual registration numbers and deployment-specific legal information belong in private runtime/configuration, outside public source. All footer content is public; never enter credentials or private personal information.
+
 ### Optional Sub Hub
 
 Install the same source on the other computer, prepare a separate checkout of the private instance, and copy `config.sub.example.json` to a private directory. Enroll the device in Main's Devices page and fill in `mainUrl`, `nodeId`, `installationId` and its device `token`. Set separate absolute instance/runtime paths and the locally available executor. For a real instance, set `testMode: false` before starting:
@@ -102,7 +118,11 @@ Never commit real configuration, device tokens, model credentials, pairing recor
 
 ## Language and timezone
 
-In the private instance's `user-space/overrides.yaml`:
+Interface text is registered in `public/locales/en.js`. New languages translate that table and register once in `public/languages.js`; menus and locale asset routes follow automatically. See [translation maintenance](docs/localization.md) for generation and validation commands.
+
+Use **Interface language** on the sign-in page or in the top bar to choose **Browser default**, **Chinese**, or **English**. Switching updates application labels and dates immediately without reloading or discarding drafts. The choice is saved in this browser and shared across its tabs for the same site. Unsupported browser languages fall back to English; if browser storage is blocked, switching still works for the current page. Conversations, model output, custom names, and deployment-provided footer text and links retain their original content. Technical diagnostics returned by the server may remain in English.
+
+The interface preference is independent of the model response language. To configure model replies, edit the private instance's `user-space/overrides.yaml`:
 
 ```yaml
 display:
@@ -127,14 +147,14 @@ Update Hub software and Core separately. For a source installation:
 
 Do not overwrite a running installation or delete private runtime state. Do not run `git pull` in the private instance to update Hub. Update Core through the [Personal update guide](https://github.com/StriveJ/artificial-intelligence-personal-agent#update-your-instance); updating Core does not update Hub.
 
-This 1.0.1 distribution provides source. Managed installation and rollback tools are included for maintainers publishing signed immutable packages. A source tag does not provide a signed managed package or establish a trusted key. Use managed installation only when a release supplies an independently verified package, public-key fingerprint and installation instructions. See [package publishing](docs/release-process.md).
+This 1.1.0 distribution provides source. Managed installation and rollback tools are included for maintainers publishing signed immutable packages. A source tag does not provide a signed managed package or establish a trusted key. Use managed installation only when a release supplies an independently verified package, public-key fingerprint and installation instructions. See [package publishing](docs/release-process.md).
 
 ## Runtime contract and limits
 
 <!-- aipa-support:hub:begin -->
 | Hub contract | Source declaration |
 |---|---|
-| Program version / Node requirement | 1.0.1 / >=24 |
+| Program version / Node requirement | 1.1.0 / >=24 |
 | Package dependencies | sharp 0.35.5 |
 | Main/sub protocol range / Runtime format | 1–1 / schema 1 |
 | Core capabilities required for shared context | context-projection-v1, context-completeness-v1, memory-lifecycle-v1, business-clock-v1, memory-usage-receipts-v1 |

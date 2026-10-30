@@ -39,6 +39,9 @@ import {createAttachments, attachmentIds, attachmentEventTextV1} from './lib/att
 import { generateWebQuery, validateWebQuery } from './lib/web-query.mjs';
 import { createActivityLog, describeTask } from './lib/activity-log.mjs';
 import { createRuntimeStatus } from './lib/runtime-status.mjs';
+import { createSiteSettings, renderSiteFooter } from './lib/site-settings.mjs';
+import { LANGUAGES } from './public/languages.js';
+import { localeAssetEntries } from './lib/ui-locale-validation.mjs';
 import {supportDiagnostics,contextDiagnostic,HUB_PROTOCOL,HUB_RUNTIME_SCHEMA} from './lib/support-contract.mjs';
 import { execFile } from 'node:child_process';
 import { promisify } from 'node:util';
@@ -59,6 +62,9 @@ const assets = new Map([
   ['/agenda.js', ['agenda.js', 'text/javascript; charset=utf-8']],
   ['/agenda.css', ['agenda.css', 'text/css; charset=utf-8']],
   ['/app.js', ['app.js', 'text/javascript; charset=utf-8']],
+  ['/i18n.js', ['i18n.js', 'text/javascript; charset=utf-8']],
+  ['/languages.js', ['languages.js', 'text/javascript; charset=utf-8']],
+  ...localeAssetEntries(LANGUAGES),
   ['/json-api.js', ['json-api.js', 'text/javascript; charset=utf-8']],
   ['/navigation.js', ['navigation.js', 'text/javascript; charset=utf-8']],
   ['/task-list.js', ['task-list.js', 'text/javascript; charset=utf-8']],
@@ -113,7 +119,7 @@ function normalizePublicOrigins(values) {
   }))];
 }
 
-export async function createHub({ root, runtimeDir, adapter, runner, hostname = '', port = 4317, publicOrigins = [], publicPort, advertisedOrigin = '', engine = 'codex', tasks = {}, briefing = {}, agenda:agendaDefaults = {}, newsFetcher, webFetcher, visionFetcher, testMode = false, main = {}, contextBudgetBytes } = {}) {
+export async function createHub({ root, runtimeDir, adapter, runner, hostname = '', port = 4317, publicOrigins = [], publicPort, advertisedOrigin = '', site = {}, engine = 'codex', tasks = {}, briefing = {}, agenda:agendaDefaults = {}, newsFetcher, webFetcher, visionFetcher, testMode = false, main = {}, contextBudgetBytes } = {}) {
   contextBudgetBytes = validateContextBudget(contextBudgetBytes);
   if (!root) throw new Error("--root <personal-instance-directory> is required");
   if (!['codex', 'claude', 'harness'].includes(engine)) throw new Error("engine must be codex or claude");
@@ -142,6 +148,7 @@ export async function createHub({ root, runtimeDir, adapter, runner, hostname = 
   const release = lockRuntime(runtimeDir);
   try {
   const store = createStore(root);
+  const siteSettings = createSiteSettings(runtimeDir, site);
   const attachments = createAttachments({root,runtimeDir,store});
   if(main.enabled && !attachments.available) throw new Error("Image dependency sharp@0.35.5 unavailable. Install main Hub dependencies from the lockfile first.");
   const chatVisibility = createChatVisibility(runtimeDir);
@@ -611,6 +618,10 @@ export async function createHub({ root, runtimeDir, adapter, runner, hostname = 
       }
       if (req.method === 'GET' && assets.has(pathname)) {
         const [file, type] = assets.get(pathname);
+        if (pathname === '/') {
+          const html = readFileSync(join(HERE, 'public', file), 'utf8').replace('<footer id="site-footer" class="site-footer" hidden><!-- site-footer --></footer>', () => renderSiteFooter(siteSettings.get()));
+          res.writeHead(200, { 'Content-Type': type }); return res.end(html);
+        }
         res.writeHead(200, { 'Content-Type': type }); return res.end(readFileSync(join(HERE, 'public', file)));
       }
       if (req.method === 'POST' && pathname === '/api/local-login') {
@@ -636,6 +647,8 @@ export async function createHub({ root, runtimeDir, adapter, runner, hostname = 
         return send(res, { ok: true });
       }
       if (!authenticated(req)) throw problem("Connect to your AIPA first", 401);
+      if (req.method === 'GET' && pathname === '/api/site-settings') return send(res, siteSettings.get());
+      if (req.method === 'POST' && pathname === '/api/site-settings') return send(res, siteSettings.update(await bodyOf(req)));
       // Keep diagnostics available while Core is blocked, without invoking it.
       if (req.method === 'GET' && pathname === '/api/status') {
         const core = coreStatus();
@@ -977,7 +990,7 @@ if (process.argv[1] && resolve(process.argv[1]) === fileURLToPath(import.meta.ur
   try {
     const config = arg('config') ? readJson(resolve(arg('config')), {}) : {};
     const root = arg('root') || config.root || process.env.AIPA_ROOT;
-    const hub = await createHub({ root, port: Number(arg('port') || config.port || 4317), hostname: arg('hostname') || config.hostname || '', publicOrigins: config.publicOrigins, publicPort: config.publicPort, advertisedOrigin: config.advertisedOrigin, runtimeDir: config.runtimeDir, engine: arg('engine') || config.engine || process.env.AIPA_HUB_ENGINE || 'codex', tasks: config.tasks, briefing: config.briefing, testMode: config.testMode, main: config.main, contextBudgetBytes: config.contextBudgetBytes });
+    const hub = await createHub({ root, port: Number(arg('port') || config.port || 4317), hostname: arg('hostname') || config.hostname || '', publicOrigins: config.publicOrigins, publicPort: config.publicPort, advertisedOrigin: config.advertisedOrigin, site: config.site, runtimeDir: config.runtimeDir, engine: arg('engine') || config.engine || process.env.AIPA_HUB_ENGINE || 'codex', tasks: config.tasks, briefing: config.briefing, testMode: config.testMode, main: config.main, contextBudgetBytes: config.contextBudgetBytes });
     const url = await hub.listen();
     console.log(JSON.stringify({ status: 'ready', url, pid: process.pid, instance: basename(resolve(root)) }));
     for (const signal of ['SIGINT', 'SIGTERM']) process.on(signal, () => { void hub.close().then(() => process.exit(0)); });

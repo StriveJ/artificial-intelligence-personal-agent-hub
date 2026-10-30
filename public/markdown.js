@@ -1,3 +1,4 @@
+import { t, setText, setUiAttribute } from './i18n.js';
 import { Marked } from './vendor/marked.esm.js';
 import DOMPurify from './vendor/purify.es.mjs';
 
@@ -28,12 +29,12 @@ export function renderMarkdown(text) {
   }
   for (const input of root.querySelectorAll('input')) {
     if (input.type !== 'checkbox') input.remove();
-    else { input.disabled = true; input.tabIndex = -1; input.setAttribute('aria-label', input.checked ? "Completed" : "Incomplete"); }
+    else { input.disabled = true; input.tabIndex = -1; setUiAttribute(input, 'aria-label', () => ((input.checked ? t("Completed") : t("Incomplete")))); }
   }
   for (const table of root.querySelectorAll('table')) {
     const wrap = document.createElement('div');
     wrap.className = 'markdown-table'; wrap.tabIndex = 0;
-    wrap.setAttribute('role', 'region'); wrap.setAttribute('aria-label', 'Table, scroll horizontally');
+    wrap.setAttribute('role', 'region'); setUiAttribute(wrap, 'aria-label', () => (t('Table, scroll horizontally')));
     table.replaceWith(wrap); wrap.append(table);
   }
   for (const pre of root.querySelectorAll('pre')) {
@@ -42,16 +43,16 @@ export function renderMarkdown(text) {
     const wrap = document.createElement('div'); wrap.className = 'code-block';
     const bar = document.createElement('div'); bar.className = 'code-toolbar';
     const language = document.createElement('span');
-    language.textContent = [...code.classList].find(name => name.startsWith('language-'))?.slice(9) || "Code";
+    setText(language, () => (([...code.classList].find(name => name.startsWith('language-'))?.slice(9) || t("Code"))));
     const button = document.createElement('button');
-    button.type = 'button'; button.className = 'copy-code'; button.textContent = "Copy code";
-    button.setAttribute('aria-label', 'Copy this code block');
+    button.type = 'button'; button.className = 'copy-code'; setText(button, () => (t("Copy code")));
+    setUiAttribute(button, 'aria-label', () => (t('Copy this code block')));
     button.onclick = async () => {
       try {
         await navigator.clipboard.writeText(code.textContent);
-        button.textContent = "Copied";
-      } catch { button.textContent = 'Press and hold the code to copy it'; }
-      setTimeout(() => { button.textContent = "Copy code"; }, 2000);
+        setText(button, () => (t("Copied")));
+      } catch { setText(button, () => (t('Press and hold the code to copy it'))); }
+      setTimeout(() => { setText(button, () => (t("Copy code"))); }, 2000);
     };
     bar.append(language, button); pre.replaceWith(wrap); wrap.append(bar, pre);
   }

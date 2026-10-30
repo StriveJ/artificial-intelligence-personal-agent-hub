@@ -3,6 +3,7 @@
   "runtimeDir": "/srv/aipa-main/runtime",
   "_timeZoneHelp": "Set time_zone in the instance user-space/llm-provider.yaml. Do not add a differing main.timeZone override.",
   "engine": "claude",
+  "site": { "icpNumber": "", "footerText": "", "footerLinks": [] },
   "port": 14327,
   "testMode": true,
   "tasks": { "repo-sync": { "enabled": true, "intervalMinutes": 30, "mode": "bidirectional" } },
