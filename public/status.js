@@ -26,7 +26,7 @@ export const duration = ms => {
   return t('{0} days {1} hours', Math.floor(hours / 24), hours % 24);
 };
 
-export function createDeviceList({ container, formatDate }) {
+export function createDeviceList({ container, formatDate, onRename = null, notify = () => {} }) {
   const doc = container.ownerDocument, cards = new Map();
   const el = (tag, className, value) => { const node = doc.createElement(tag); if (className) node.className = className; if (value !== undefined) setText(node, value); return node; };
   const text = (node, value) => { if (node.textContent !== value) setText(node, value); };
@@ -38,8 +38,22 @@ export function createDeviceList({ container, formatDate }) {
     const facts = el('dl', 'device-facts'), values = {};
     for (const key of ["Status", "Version", "Framework status", "Platform", "Uptime", "Last heartbeat", "Last sync", "Next task"]) { const dd = el('dd'); values[key] = dd; facts.append(el('dt', '', () => t(key)), dd); }
     card.append(head, role, facts);
+    let nameField = null, renameButton = null;
+    if (device.role !== 'main' && onRename) {
+      nameField = el('input', 'device-name');
+      nameField.type = 'text'; nameField.maxLength = 40; nameField.autocomplete = 'off'; nameField.value = device.name || '';
+      nameField.addEventListener('input', () => { nameField.dataset.dirty = '1'; });
+      renameButton = el('button', 'text-button', () => t("Rename"));
+      renameButton.onclick = async () => {
+        try { await onRename(device.id, nameField.value); delete nameField.dataset.dirty; }
+        catch (error) { notify(error.message || String(error)); }
+      };
+      const row = el('p', 'device-rename');
+      row.append(el('span', 'muted', () => t("Device name")), nameField, renameButton);
+      card.append(row);
+    }
     container.append(card);
-    const entry = { card, dot, name, badge, role, values, signature: '' };
+    const entry = { card, dot, name, badge, role, values, nameField, renameButton, signature: '' };
     cards.set(device.id, entry); return entry;
   }
   return snapshot => {
@@ -55,10 +69,14 @@ export function createDeviceList({ container, formatDate }) {
       const degraded = device.protocolCompatible === false;
       const statusKey = device.status !== 'online' ? 'offline' : maintenance ? 'maintenance' : degraded ? 'degraded' : 'online';
       entry.dot.className = `status-dot status-${statusKey}`;
-      text(entry.name, () => (device.id));
+      text(entry.name, () => (device.name && device.name !== device.id ? `${device.name} · ${device.id}` : device.id));
       text(entry.badge, () => ((statusKey === 'online' ? t("Online") : (statusKey === 'offline' ? t("Offline") : (statusKey === 'maintenance' ? t("Under maintenance") : t("Protocol incompatible"))))));
       entry.badge.className = `device-badge device-${statusKey}`;
       text(entry.role, () => ((device.role === 'main' ? t("Main Hub · {0} · Management port {1}{2}", device.label, (device.endpoints?.port ?? '—'), (device.endpoints?.publicPort ? t(" / public {0}", device.endpoints.publicPort) : '')) : t("Sub Hub · Instance task {0}", (device.taskBusy ? t("active (sync deferred)") : t("Idle"))))));
+      if (entry.nameField) {
+        const editing = doc.activeElement === entry.nameField || entry.nameField.dataset.dirty === '1';
+        if (!editing && entry.nameField.value !== (device.name || '')) entry.nameField.value = device.name || '';
+      }
       const values = () => ({
         "Status": statusKey === 'online' ? t('Online') + (device.idle === false ? t(' (busy)') : device.idle === true ? t(' (idle)') : '')
           : statusKey === 'offline' ? t('Offline') : statusKey === 'maintenance' ? t('Under maintenance; not accepting new tasks') : t('Online, but protocol incompatible; no tasks dispatched'),

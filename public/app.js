@@ -232,7 +232,16 @@ async function loadTasks() {
   if (!document.hidden && (state.view === 'tasks' || tasks.some(task => task.status === 'running'))) state.taskPolling = setTimeout(() => loadTasks().catch(error => toast(error.message)), 4000);
 }
 
-const renderDevices = createDeviceList({ container: $('status-devices'), formatDate: date });
+const renderDevices = createDeviceList({
+  container: $('status-devices'),
+  formatDate: date,
+  notify: message => toast(message),
+  onRename: async (id, name) => {
+    await api(`/api/nodes/${encodeURIComponent(id)}/rename`, { name });
+    toast(t('Device name updated'));
+    await loadStatus();
+  },
+});
 const renderActivity = createActivityTimeline({ container: $('status-activity'), empty: $('status-activity-empty'), timeZone:activeTimeZone });
 const ACTIVITY_PAGE_SIZE = 100;
 const STATUS_FILTERS = [
@@ -325,30 +334,16 @@ async function loadMainManagement() {
     if (!card) {
       const row = el('article', 'note-card');
       const title = el('h3'), syncLine = el('p', 'muted'), protocolLine = el('p', 'muted');
-      const nameField = el('input', 'device-name');
-      nameField.type = 'text'; nameField.maxLength = 40; nameField.autocomplete = 'off';
-      nameField.addEventListener('input', () => { nameField.dataset.dirty = '1'; });
-      const renameButton = el('button', 'text-button', () => t("Rename"));
-      const renameRow = el('p', 'device-rename');
-      renameRow.append(el('span', 'muted', () => t("Device name")), nameField, renameButton);
       const pendingLine = el('p', 'muted');
       const actions = [];
-      row.append(title, syncLine, protocolLine, renameRow);
+      row.append(title, syncLine, protocolLine);
       for (const [kind, label] of [['sync', "Sync now"], ['clear', 'Clear this sub Hub']]) {
         const button = el('button', 'text-button', () => t(label));
         button.onclick = async () => { try { await api(`/api/nodes/${encodeURIComponent(node.id)}/${kind}`, { id: crypto.randomUUID() }); toast(t('Request recorded; waiting for device execution and acknowledgment')); await loadMainManagement(); } catch (e) { toast(e.message); } };
         actions.push(button); row.append(button);
       }
       row.append(pendingLine);
-      renameButton.onclick = async () => {
-        try {
-          await api(`/api/nodes/${encodeURIComponent(node.id)}/rename`, { name: nameField.value });
-          delete nameField.dataset.dirty;
-          toast(t('Device name updated'));
-          await loadMainManagement();
-        } catch (e) { toast(e.message); }
-      };
-      card = { row, title, syncLine, protocolLine, nameField, renameButton, actions, pendingLine };
+      card = { row, title, syncLine, protocolLine, actions, pendingLine };
       nodeCards.set(node.id, card);
       $('hub-nodes').append(row);
     }
@@ -357,9 +352,6 @@ async function loadMainManagement() {
     setText(card.syncLine, () => ((node.taskBusy ? t('An instance task is active; synchronization is deferred.') : t("Last sync: {0}", (node.sync?.code || t("No result yet"))))));
     card.protocolLine.hidden = node.protocolCompatible !== false;
     setText(card.protocolLine, () => t('Protocol incompatible; task distribution to this device is paused.'));
-    // Never overwrite a name that is being typed or was typed but not submitted yet.
-    const editing = document.activeElement === card.nameField || card.nameField.dataset.dirty === '1';
-    if (!editing && card.nameField.value !== (node.name || '')) card.nameField.value = node.name || '';
     const pending = operations.filter(o => o.nodeId === node.id && o.status === 'queued');
     card.pendingLine.hidden = !pending.length;
     setText(card.pendingLine, () => t("Pending: {0} items", pending.length));
