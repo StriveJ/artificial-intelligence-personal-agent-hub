@@ -606,5 +606,13 @@ export default Object.freeze({
   "Task queued.": "Task queued.",
   "Queueing…": "Queueing…",
   "Task queue unavailable": "Task queue unavailable",
-  "Could not queue the task": "Could not queue the task"
+  "Could not queue the task": "Could not queue the task",
+  "Task dispatch": "Task dispatch",
+  "Dispatch": "Dispatch",
+  "Device": "Device",
+  "Any device that can run tasks": "Any device that can run tasks",
+  "Only devices that advertise task execution can be selected.": "Only devices that advertise task execution can be selected.",
+  "No device can run tasks yet. Start a Sub Hub with task execution enabled.": "No device can run tasks yet. Start a Sub Hub with task execution enabled.",
+  "SEND WORK TO A DEVICE": "SEND WORK TO A DEVICE",
+  "Dispatch a task.": "Dispatch a task."
 });

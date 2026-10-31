@@ -59,9 +59,9 @@ function showView(view) {
   state.view = view;
   clearTimeout(state.taskPolling);
   clearTimeout(state.statusPolling);
-  for (const name of ['chat', 'notes', 'memory', 'tasks', 'status', 'pushes']) $(`${name}-view`).hidden = name !== view;
+  for (const name of ['chat', 'notes', 'memory', 'tasks', 'dispatch', 'status', 'pushes']) $(`${name}-view`).hidden = name !== view;
   navigation.setActive(view);
-  setText($('view-label'), () => t({ chat: "Chat", notes: "Notes", memory: "Memory", tasks: "Scheduled tasks", status: "Runtime status", pushes: "Notifications" }[view]));
+  setText($('view-label'), () => t({ chat: "Chat", notes: "Notes", memory: "Memory", tasks: "Scheduled tasks", dispatch: "Task dispatch", status: "Runtime status", pushes: "Notifications" }[view]));
   if (view === 'notes') void loadNotes().catch(error => toast(error.message));
   if (view === 'tasks') void loadTasks().catch(error => toast(error.message));
   if (view === 'status') void loadStatus().catch(error => toast(error.message));

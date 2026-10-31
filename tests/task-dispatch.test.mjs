@@ -74,3 +74,23 @@ test("claim returns an empty slot when nothing is queued", async t => {
   const claimed = await (await node('/api/nodes/tasks/claim', {})).json();
   assert.equal(claimed.task, null);
 });
+
+test("a task can be dispatched to a device that advertises task support", async t => {
+  const { node, session } = await hubWithNode(t);
+  await node('/api/nodes/poll', { capabilities: { protocolMin: 1, protocolMax: 1, tasks: true } });
+  const submitted = await session('/api/task-queue', { prompt: "Run on the named device", nodeId: 'lan-1', timeoutMs: 60_000 });
+  assert.equal(submitted.status, 201);
+  const task = await submitted.json();
+  assert.equal(task.targetNode, 'lan-1');
+  const claimed = await (await node('/api/nodes/tasks/claim', {})).json();
+  assert.equal(claimed.task.id, task.id);
+});
+
+test("dispatching to a device without task support is refused", async t => {
+  const { node, session } = await hubWithNode(t);
+  await node('/api/nodes/poll', { capabilities: { protocolMin: 1, protocolMax: 1, tasks: false } });
+  const refused = await session('/api/task-queue', { prompt: "Run there", nodeId: 'lan-1' });
+  assert.equal(refused.status, 409);
+  const unknown = await session('/api/task-queue', { prompt: "Run nowhere", nodeId: 'ghost' });
+  assert.equal(unknown.status, 404);
+});

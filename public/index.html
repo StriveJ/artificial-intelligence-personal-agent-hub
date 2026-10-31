@@ -120,19 +120,6 @@
       <section id="tasks-view" class="view content-view" hidden>
         <div class="section-intro"><p class="eyebrow">KEEP THINGS UP TO DATE</p><h1>Stay up to date, on schedule.</h1><p class="muted">Tasks run automatically while the Hub device is online. Review results or run one now.</p></div>
         <div id="tasks-list" aria-live="polite"></div>
-        <section id="dispatch" aria-labelledby="dispatch-heading">
-          <div class="list-heading"><h2 id="dispatch-heading">Dispatch a task</h2><button id="dispatch-refresh" class="text-button" type="button">Refresh</button></div>
-          <p class="muted">Queue work for a Sub Hub that has an executor. Each task is leased while it runs and retried if the executor disappears.</p>
-          <form id="dispatch-form">
-            <label for="dispatch-prompt">Task</label>
-            <textarea id="dispatch-prompt" rows="3" maxlength="8000" required></textarea>
-            <label for="dispatch-cwd">Directory within the instance (optional)</label>
-            <input id="dispatch-cwd" type="text" maxlength="240" autocomplete="off">
-            <button class="primary" type="submit">Queue task</button>
-            <p id="dispatch-status" class="muted" role="status"></p>
-          </form>
-          <div id="dispatch-list" aria-live="polite"></div>
-        </section>
         <details class="push-settings site-settings"><summary>Website footer and legal information</summary>
           <form id="site-settings-form">
             <fieldset id="site-settings-fields" disabled>
@@ -172,11 +159,27 @@
             </details>
           </section>
       </section>
+      <section id="dispatch-view" class="view content-view" hidden>
+        <div class="section-intro"><p class="eyebrow">SEND WORK TO A DEVICE</p><h1>Dispatch a task.</h1><p class="muted">Queue work for a Sub Hub that has an executor. Each task is leased while it runs and retried if the executor disappears.</p></div>
+        <div class="list-heading"><h2>Dispatch a task</h2><button id="dispatch-refresh" class="text-button" type="button">Refresh</button></div>
+        <form id="dispatch-form">
+          <label for="dispatch-node">Device</label>
+          <select id="dispatch-node"></select>
+          <p id="dispatch-node-help" class="muted"></p>
+          <label for="dispatch-prompt">Task</label>
+          <textarea id="dispatch-prompt" rows="3" maxlength="8000" required></textarea>
+          <label for="dispatch-cwd">Directory within the instance (optional)</label>
+          <input id="dispatch-cwd" type="text" maxlength="240" autocomplete="off">
+          <button class="primary" type="submit">Queue task</button>
+          <p id="dispatch-status" class="muted" role="status"></p>
+        </form>
+        <div id="dispatch-list" aria-live="polite"></div>
+      </section>
       <section id="status-view" class="view content-view" hidden>
         <div class="section-intro"><p class="eyebrow">WHAT IS RUNNING RIGHT NOW</p><h1>Devices and activity at a glance.</h1><p class="muted">View main and sub Hub availability, recent synchronization, and activity. Logs contain actions and results, without conversation content.</p></div>
         <p id="status-summary" class="status-summary" aria-live="polite"></p>
         <p id="status-entry" class="status-entry" hidden></p>
-        <div class="list-heading"><h2>DevicesStatus</h2><button id="status-refresh" class="text-button">Refresh</button></div>
+        <div class="list-heading"><h2>Devices</h2><button id="status-refresh" class="text-button">Refresh</button></div>
         <div id="status-devices" class="device-grid" aria-live="polite"></div>
         <div class="list-heading"><h2>Activity log</h2><span id="status-activity-count" class="muted"></span></div>
         <div id="status-filters" class="activity-toolbar" role="group" aria-label="Log filters"></div>

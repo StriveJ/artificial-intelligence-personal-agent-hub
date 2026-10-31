@@ -715,8 +715,14 @@ export async function createHub({ root, runtimeDir, adapter, runner, hostname = 
       if (taskQueue && req.method === 'POST' && pathname === '/api/task-queue') {
         if (!localAccess) throw problem("Submit tasks from the local Main Hub page", 403);
         const body = await bodyOf(req);
-        const task = taskQueue.submit({ ...body, id: body.id || body.requestId, createdBy: 'web' });
-        activity.append({ kind: 'task', action: 'task-submit', status: 'info', summary: `Queued task ${task.id}: ${task.prompt.slice(0, 80)}`, detail: { taskId: task.id } });
+        const target = body.nodeId === undefined || body.nodeId === null || body.nodeId === '' ? null : String(body.nodeId);
+        if (target) {
+          const node = nodes.list().find(item => item.id === target);
+          if (!node) throw problem("Device not found", 404);
+          if (!(node.capabilities && node.capabilities.tasks === true)) throw problem("This device cannot run dispatched tasks", 409);
+        }
+        const task = taskQueue.submit({ ...body, nodeId: target || undefined, id: body.id || body.requestId, createdBy: 'web' });
+        activity.append({ kind: 'task', action: 'task-submit', status: 'info', summary: `Queued task ${task.id}: ${task.prompt.slice(0, 80)}${task.targetNode ? ` for ${task.targetNode}` : ''}`, detail: { taskId: task.id, deviceId: task.targetNode || '' } });
         outbox.enqueue('user_message', `Task ${task.id}: ${task.prompt.slice(0, 200)}`, 'tasks', `hub-task-${task.id}`);
         return send(res, task, 201);
       }

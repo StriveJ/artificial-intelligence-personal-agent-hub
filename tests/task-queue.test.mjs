@@ -157,3 +157,20 @@ test("the scheduler task file is neither read nor overwritten", t => {
   assert.equal(readFileSync(schedulerFile, 'utf8'), original, "the scheduler file must stay untouched");
   assert.ok(existsSync(join(runtimeDir, 'task-queue.json')));
 });
+test("a targeted task is only claimable by the named device", t => {
+  const runtimeDir = temp(t), time = clock();
+  const queue = createTaskQueue({ runtimeDir, now: time.now });
+  const task = queue.submit({ id: 'task-0001', prompt: "Run on lan", nodeId: 'lan-1', timeoutMs: 30_000, leaseSeconds: 60 });
+  assert.equal(task.targetNode, 'lan-1');
+  assert.equal(queue.claim({ nodeId: 'other-node' }), null, "untargeted devices must not take a targeted task");
+  const claimed = queue.claim({ nodeId: 'lan-1' });
+  assert.equal(claimed.id, 'task-0001');
+});
+
+test("an untargeted task stays open to any device", t => {
+  const runtimeDir = temp(t), time = clock();
+  const queue = createTaskQueue({ runtimeDir, now: time.now });
+  queue.submit({ id: 'task-0001', prompt: "Anywhere", timeoutMs: 30_000, leaseSeconds: 60 });
+  assert.equal(queue.get('task-0001').targetNode, null);
+  assert.equal(queue.claim({ nodeId: 'whatever' }).id, 'task-0001');
+});
