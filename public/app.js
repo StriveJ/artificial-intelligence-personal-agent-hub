@@ -317,9 +317,17 @@ async function loadMainManagement() {
   const { nodes, operations } = await api('/api/nodes'); $('hub-nodes').replaceChildren();
   for (const node of nodes) {
     const row = el('article', 'note-card');
-    row.append(el('h3', '', () => (t("{0} · {1}", node.id, (node.status === 'online' ? t("Online") : t("Removed"))))));
+    const label = node.name && node.name !== node.id ? `${node.name} · ${node.id}` : node.id;
+    row.append(el('h3', '', () => (t("{0} · {1}", label, (node.status === 'online' ? t("Online") : t("Removed"))))));
     row.append(el('p', 'muted', () => ((node.taskBusy ? t('An instance task is active; synchronization is deferred.') : t("Last sync: {0}", (node.sync?.code || t("No result yet")))))));
     if (node.protocolCompatible === false) row.append(el('p', 'muted', () => (t('Protocol incompatible; task distribution to this device is paused.'))));
+    const nameField = el('input', 'device-name');
+    nameField.type = 'text'; nameField.maxLength = 40; nameField.value = node.name || ''; nameField.autocomplete = 'off';
+    const renameButton = el('button', 'text-button', () => t("Rename"));
+    renameButton.onclick = async () => { try { await api(`/api/nodes/${encodeURIComponent(node.id)}/rename`, { name: nameField.value }); toast(t('Device name updated')); await loadMainManagement(); } catch (e) { toast(e.message); } };
+    const renameRow = el('p', 'device-rename');
+    renameRow.append(el('span', 'muted', () => t("Device name")), nameField, renameButton);
+    row.append(renameRow);
     for (const [kind, label] of [['sync', "Sync now"], ['clear', 'Clear this sub Hub']]) {
       const button = el('button', 'text-button', () => t(label));
       button.onclick = async () => { try { await api(`/api/nodes/${encodeURIComponent(node.id)}/${kind}`, { id: crypto.randomUUID() }); toast(t('Request recorded; waiting for device execution and acknowledgment')); await loadMainManagement(); } catch (e) { toast(e.message); } };

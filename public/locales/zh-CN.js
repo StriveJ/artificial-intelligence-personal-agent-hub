@@ -613,5 +613,8 @@ export default Object.freeze({
   "Only devices that advertise task execution can be selected.": "只有声明了任务执行能力的子端才能被选中。",
   "No device can run tasks yet. Start a Sub Hub with task execution enabled.": "还没有能执行任务的子端。先启动一个开启任务执行的子端。",
   "SEND WORK TO A DEVICE": "把活派给子端",
-  "Dispatch a task.": "派发一个任务。"
+  "Dispatch a task.": "派发一个任务。",
+  "Rename": "重命名",
+  "Device name": "子端名称",
+  "Device name updated": "子端名称已更新"
 });

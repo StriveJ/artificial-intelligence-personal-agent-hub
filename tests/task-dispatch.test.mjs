@@ -94,3 +94,29 @@ test("dispatching to a device without task support is refused", async t => {
   const unknown = await session('/api/task-queue', { prompt: "Run nowhere", nodeId: 'ghost' });
   assert.equal(unknown.status, 404);
 });
+test("a device name can be set once, is unique, and reaches the device on poll", async t => {
+  const { node, session } = await hubWithNode(t);
+  const unnamed = await (await session('/api/nodes', null, 'GET')).json();
+  assert.equal(unnamed.nodes[0].name, undefined);
+  const renamed = await session('/api/nodes/lan-1/rename', { name: 'LAN helper' });
+  assert.equal(renamed.status, 200);
+  assert.equal((await renamed.json()).name, 'LAN helper');
+  const named = await (await session('/api/nodes', null, 'GET')).json();
+  assert.equal(named.nodes[0].name, 'LAN helper');
+  const polled = await (await node('/api/nodes/poll', {})).json();
+  assert.equal(polled.name, 'LAN helper');
+  const invalid = await session('/api/nodes/lan-1/rename', { name: '' });
+  assert.equal(invalid.status, 400);
+  const missing = await session('/api/nodes/ghost/rename', { name: 'Ghost' });
+  assert.equal(missing.status, 404);
+});
+
+test("two live devices cannot share a name", async t => {
+  const { origin, Cookie, node, session } = await hubWithNode(t);
+  const second = await (await fetch(origin + '/api/nodes/enroll', { method: 'POST', headers: { Origin: origin, 'Content-Type': 'application/json', Cookie }, body: JSON.stringify({ id: 'lan-2' }) })).json();
+  await fetch(origin + '/api/nodes/poll', { method: 'POST', headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${second.token}` }, body: JSON.stringify({ nodeId: 'lan-2', installationId: second.installationId, capabilities: { protocolMin: 1, protocolMax: 1 } }) });
+  await node('/api/nodes/poll', {});
+  assert.equal((await session('/api/nodes/lan-1/rename', { name: 'Shared' })).status, 200);
+  const clash = await session('/api/nodes/lan-2/rename', { name: 'shared' });
+  assert.equal(clash.status, 409);
+});

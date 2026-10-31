@@ -614,5 +614,8 @@ export default Object.freeze({
   "Only devices that advertise task execution can be selected.": "Only devices that advertise task execution can be selected.",
   "No device can run tasks yet. Start a Sub Hub with task execution enabled.": "No device can run tasks yet. Start a Sub Hub with task execution enabled.",
   "SEND WORK TO A DEVICE": "SEND WORK TO A DEVICE",
-  "Dispatch a task.": "Dispatch a task."
+  "Dispatch a task.": "Dispatch a task.",
+  "Rename": "Rename",
+  "Device name": "Device name",
+  "Device name updated": "Device name updated"
 });

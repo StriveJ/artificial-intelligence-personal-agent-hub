@@ -733,6 +733,15 @@ export async function createHub({ root, runtimeDir, adapter, runner, hostname = 
         activity.append({ kind: 'device', action: 'node-enroll', status: 'success', summary: `Register sub Hub ${enrolled.id}`, detail: { deviceId: enrolled.id } });
         return send(res, enrolled, 201);
       }
+      const nodeRename = pathname.match(/^\/api\/nodes\/([^/]{1,120})\/rename$/);
+      if (nodes && req.method === 'POST' && nodeRename) {
+        if (!localAccess) throw problem("Rename devices from the local Main Hub page", 403);
+        const body = await bodyOf(req);
+        let decoded; try { decoded = decodeURIComponent(nodeRename[1]); } catch { throw problem("Invalid device reference", 400); }
+        const renamed = nodes.rename(decoded, body.name);
+        activity.append({ kind: 'device', action: 'node-rename', status: 'success', summary: `${renamed.id} named ${renamed.name}`, detail: { deviceId: renamed.id, name: renamed.name } });
+        return send(res, renamed);
+      }
       const nodeAction = pathname.match(/^\/api\/nodes\/([a-zA-Z0-9_-]{3,80})\/(sync|clear|offline)$/);
       if (nodes && req.method === 'POST' && nodeAction) {
         const body = await bodyOf(req), [, id, kind] = nodeAction;

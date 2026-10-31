@@ -53,7 +53,7 @@ export function mountTaskQueuePanel(doc = document, win = window) {
       const previous = nodeSelect.value;
       nodeSelect.replaceChildren(
         option(doc, '', t("Any device that can run tasks")),
-        ...eligible.map(node => option(doc, node.id, `${node.id} · ${node.status === 'online' ? t("Online") : t("Offline")}`)),
+        ...eligible.map(node => option(doc, node.id, `${node.name || node.id}${node.name ? ` (${node.id})` : ''} · ${node.status === 'online' ? t("Online") : t("Offline")}`)),
       );
       nodeSelect.value = eligible.some(node => node.id === previous) ? previous : '';
       nodeSelect.disabled = eligible.length === 0;

@@ -2,7 +2,7 @@ import { createServer } from 'node:net';
 import { join, resolve } from 'node:path';
 import { fileURLToPath,pathToFileURL } from 'node:url';
 import { randomBytes, createHash, timingSafeEqual } from 'node:crypto';
-import { mkdirSync, chmodSync, unlinkSync, existsSync, realpathSync } from 'node:fs';
+import { mkdirSync, chmodSync, unlinkSync, existsSync, realpathSync, writeFileSync } from 'node:fs';
 import {createCoreRuntime} from './lib/core-runtime.mjs';
 import { createInstanceSync } from './lib/instance-sync.mjs';
 import { readJson, writeJson } from './lib/storage.mjs';
@@ -109,14 +109,24 @@ export async function createSubHub(config) {
     if (!response.ok) throw new Error("Main/sub communication incomplete");
     return response.json();
   }
+  // The Main Hub owns the display name. Keep the assigned name in this device's own
+  // configuration so it survives a restart and still describes itself while offline.
+  function persistConfig() {
+    if (!config.configFile) return;
+    try {
+      const { configFile, runner, ...rest } = config;
+      writeFileSync(configFile, JSON.stringify(rest, null, 2) + '\n', { mode: 0o600 });
+    } catch { /* the name still applies in memory; the next poll retries */ }
+  }
   async function cycle() {
     if (stopped || cycling) return cycling;
     cycling = (async () => {
       void sync.tick();
       try {
-        const { operations, protocol, compatible } = await post('/api/nodes/poll', { sync: sync.status().result, taskBusy: Boolean(sync.gate.state()), capabilities: { protocolMin:HUB_PROTOCOL.min, protocolMax:HUB_PROTOCOL.max, releaseId: process.env.AIPA_HUB_RELEASE_ID || 'development', deploymentGeneration: Number(process.env.AIPA_HUB_DEPLOYMENT_GENERATION || 0), runtimeSchema:HUB_RUNTIME_SCHEMA, updaterVersion: process.send ? 1 : null, platform: process.platform, arch: process.arch, testMode, tasks: taskWorker.status().enabled } });
+        const { operations, protocol, compatible, name: assignedName } = await post('/api/nodes/poll', { sync: sync.status().result, taskBusy: Boolean(sync.gate.state()), capabilities: { protocolMin:HUB_PROTOCOL.min, protocolMax:HUB_PROTOCOL.max, releaseId: process.env.AIPA_HUB_RELEASE_ID || 'development', deploymentGeneration: Number(process.env.AIPA_HUB_DEPLOYMENT_GENERATION || 0), runtimeSchema:HUB_RUNTIME_SCHEMA, updaterVersion: process.send ? 1 : null, platform: process.platform, arch: process.arch, testMode, tasks: taskWorker.status().enabled } });
         if (compatible === false || protocol !== undefined && (protocol<HUB_PROTOCOL.min||protocol>HUB_PROTOCOL.max)) throw new Error("Main/sub protocol incompatible");
         connection = { status: 'online', lastSeen: new Date().toISOString() };
+        if (assignedName && assignedName !== config.name) { config.name = assignedName; persistConfig(); }
         for (const op of operations) {
           if (op.installationId !== installationId) continue;
           let result = receipts[op.id];
@@ -131,7 +141,7 @@ export async function createSubHub(config) {
     })().finally(() => { cycling = null; });
     return cycling;
   }
-  const status = () => ({ role: 'sub', nodeId, testMode, releaseId: process.env.AIPA_HUB_RELEASE_ID || 'development', deploymentGeneration: Number(process.env.AIPA_HUB_DEPLOYMENT_GENERATION || 0), protocol:HUB_PROTOCOL.max, runtimeSchema:HUB_RUNTIME_SCHEMA,support:hubSupport(),coreDiagnostics:'not-checked', maintenance: sync.gate.maintenance(), connection, engine, engineAvailable: runner.available !== false, model:agendaProfile(),agenda:true,sync: sync.status(), task: sync.gate.state(), tasks: taskWorker.status() });
+  const status = () => ({ role: 'sub', nodeId, name: config.name || nodeId, testMode, releaseId: process.env.AIPA_HUB_RELEASE_ID || 'development', deploymentGeneration: Number(process.env.AIPA_HUB_DEPLOYMENT_GENERATION || 0), protocol:HUB_PROTOCOL.max, runtimeSchema:HUB_RUNTIME_SCHEMA,support:hubSupport(),coreDiagnostics:'not-checked', maintenance: sync.gate.maintenance(), connection, engine, engineAvailable: runner.available !== false, model:agendaProfile(),agenda:true,sync: sync.status(), task: sync.gate.state(), tasks: taskWorker.status() });
   const server = createServer(socket => {
     socket.setTimeout(5000, () => socket.destroy()); let raw = '';
     socket.on('data', async bytes => {
