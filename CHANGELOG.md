@@ -1,5 +1,12 @@
 # Changelog
 
+## Unreleased
+
+- Add a task dispatch queue. `POST /api/task-queue` submits work from the signed-in Main Hub page, `GET /api/task-queue` lists it, and authenticated devices claim it with `POST /api/nodes/tasks/claim`, renew the lease with `beat`, and report one result with `ack`. `/api/tasks` keeps its existing meaning (scheduled Hub tasks).
+- Tasks carry a lease: a worker that stops renewing loses the task after `leaseSeconds`, the queue retries it with backoff, and after three attempts it closes as `timeout` / `lease-expired`. A result that arrives from the attempt that expired is still accepted, marked `late`, so finished work is not thrown away and re-run.
+- Fairness and bounds: claims prefer work this device did not already fail, queued tasks are capped, and finished tasks are pruned. Prompt, `cwd` (relative to the instance root), budget and timeout are validated on submission.
+- Execution is injected and disabled by default: a Sub Hub without an executor never claims, so old nodes are unaffected. Protocol stays at version 1; task endpoints are additive and never ride in the existing `operations` array.
+
 ## 1.1.0
 
 - Add English and Simplified Chinese interface switching with browser-language detection, persistent browser preferences, and immediate updates that preserve drafts and unsaved form fields.

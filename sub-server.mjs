@@ -19,6 +19,7 @@ import {assertAgendaWritable} from './lib/agenda-capability.mjs';
 import {ownsTaskLease} from './lib/task-gate.mjs';
 import {modelProfile} from './lib/model-profile.mjs';
 import {hubSupport,HUB_PROTOCOL,HUB_RUNTIME_SCHEMA} from './lib/support-contract.mjs';
+import {createTaskWorker} from './lib/task-worker.mjs';
 export { ipcPath, subCommand } from './lib/sub-ipc.mjs';
 
 const digest = value => createHash('sha256').update(value).digest();
@@ -38,6 +39,14 @@ export async function createSubHub(config) {
   const origin = mainURL(config.mainUrl);
   const runner = typeof config.runner==='function'?config.runner:(engine === 'harness' ? createHarnessRunner : engine === 'claude' ? createClaudeRunner : createCodexRunner)({ workDir: join(runtimeDir, 'engine-work') });
   const sync = createInstanceSync({ root, runtimeDir, testMode });
+  // Task execution is opt-in: without an injected executor the Sub Hub never claims work,
+  // so a Main Hub simply sees a device that does not accept tasks.
+  const taskWorker = createTaskWorker({
+    post,
+    runner: typeof config.taskRunner === 'function' ? config.taskRunner : null,
+    enabled: config.tasks?.enabled === true,
+    intervalMs: Number(config.tasks?.intervalMs) || 5000,
+  });
   let agendaService,agendaPromise,modelQueue=Promise.resolve();
   function executeModel(prompt){const result=modelQueue.then(()=>runner(prompt));modelQueue=result.catch(()=>{});return result;}
   const agendaProfile=()=>modelProfile({engine,runner});
@@ -91,7 +100,7 @@ export async function createSubHub(config) {
     cycling = (async () => {
       void sync.tick();
       try {
-        const { operations, protocol, compatible } = await post('/api/nodes/poll', { sync: sync.status().result, taskBusy: Boolean(sync.gate.state()), capabilities: { protocolMin:HUB_PROTOCOL.min, protocolMax:HUB_PROTOCOL.max, releaseId: process.env.AIPA_HUB_RELEASE_ID || 'development', deploymentGeneration: Number(process.env.AIPA_HUB_DEPLOYMENT_GENERATION || 0), runtimeSchema:HUB_RUNTIME_SCHEMA, updaterVersion: process.send ? 1 : null, platform: process.platform, arch: process.arch, testMode } });
+        const { operations, protocol, compatible } = await post('/api/nodes/poll', { sync: sync.status().result, taskBusy: Boolean(sync.gate.state()), capabilities: { protocolMin:HUB_PROTOCOL.min, protocolMax:HUB_PROTOCOL.max, releaseId: process.env.AIPA_HUB_RELEASE_ID || 'development', deploymentGeneration: Number(process.env.AIPA_HUB_DEPLOYMENT_GENERATION || 0), runtimeSchema:HUB_RUNTIME_SCHEMA, updaterVersion: process.send ? 1 : null, platform: process.platform, arch: process.arch, testMode, tasks: taskWorker.status().enabled } });
         if (compatible === false || protocol !== undefined && (protocol<HUB_PROTOCOL.min||protocol>HUB_PROTOCOL.max)) throw new Error("Main/sub protocol incompatible");
         connection = { status: 'online', lastSeen: new Date().toISOString() };
         for (const op of operations) {
@@ -108,7 +117,7 @@ export async function createSubHub(config) {
     })().finally(() => { cycling = null; });
     return cycling;
   }
-  const status = () => ({ role: 'sub', nodeId, testMode, releaseId: process.env.AIPA_HUB_RELEASE_ID || 'development', deploymentGeneration: Number(process.env.AIPA_HUB_DEPLOYMENT_GENERATION || 0), protocol:HUB_PROTOCOL.max, runtimeSchema:HUB_RUNTIME_SCHEMA,support:hubSupport(),coreDiagnostics:'not-checked', maintenance: sync.gate.maintenance(), connection, engine, engineAvailable: runner.available !== false, model:agendaProfile(),agenda:true,sync: sync.status(), task: sync.gate.state() });
+  const status = () => ({ role: 'sub', nodeId, testMode, releaseId: process.env.AIPA_HUB_RELEASE_ID || 'development', deploymentGeneration: Number(process.env.AIPA_HUB_DEPLOYMENT_GENERATION || 0), protocol:HUB_PROTOCOL.max, runtimeSchema:HUB_RUNTIME_SCHEMA,support:hubSupport(),coreDiagnostics:'not-checked', maintenance: sync.gate.maintenance(), connection, engine, engineAvailable: runner.available !== false, model:agendaProfile(),agenda:true,sync: sync.status(), task: sync.gate.state(), tasks: taskWorker.status() });
   const server = createServer(socket => {
     socket.setTimeout(5000, () => socket.destroy()); let raw = '';
     socket.on('data', async bytes => {
@@ -135,13 +144,13 @@ export async function createSubHub(config) {
     });
     socket.on('error', () => {});
   });
-  async function close() { stopped = true; clearInterval(timer); await cycling; await sync.stop(); await modelQueue;runner.close?.(); if (server.listening) await new Promise(r => server.close(r)); }
-  return { status, cycle, sync, async listen() {
+  async function close() { stopped = true; clearInterval(timer); taskWorker.stop(); await cycling; await sync.stop(); await modelQueue;runner.close?.(); if (server.listening) await new Promise(r => server.close(r)); }
+  return { status, cycle, sync, taskWorker, async listen() {
     const path = ipcPath(runtimeDir);
     if (filesystemSocket(path) && existsSync(path)) throw new Error("IPC path already exists. Verify the previous process first.");
     await new Promise((yes, no) => { server.once('error', no); server.listen(path, yes); });
     if (filesystemSocket(path)) chmodSync(path, 0o600);
-    timer = setInterval(() => { void cycle(); }, 5000); timer.unref(); void cycle(); return status();
+    timer = setInterval(() => { void cycle(); }, 5000); timer.unref(); void cycle(); taskWorker.start(); return status();
   }, close };
 }
 if (process.argv[1] && resolve(process.argv[1]) === fileURLToPath(import.meta.url)) {

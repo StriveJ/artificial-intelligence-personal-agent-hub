@@ -23,6 +23,7 @@ import {createDailyDigest} from './lib/daily-digest.mjs';
 import { createChatVisibility } from './lib/chat-visibility.mjs';
 import { localDay, timeZone as validateTimeZone } from './lib/time-zone.mjs';
 import { createNodeControl } from './lib/node-control.mjs';
+import { createTaskQueue } from './lib/task-queue.mjs';
 import { createInstanceSync } from './lib/instance-sync.mjs';
 import { createMainReports, logicalDay, addDay } from './lib/main-reports.mjs';
 import {createConflictReview} from './lib/conflict-review.mjs';
@@ -175,6 +176,7 @@ export async function createHub({ root, runtimeDir, adapter, runner, hostname = 
   sharedTimeZone();
   const vision=createDeepSeekVision({engine,fetcher:visionFetcher,responseLanguage});
   const nodes = main.enabled ? createNodeControl({ runtimeDir }) : null;
+  const taskQueue = main.enabled ? createTaskQueue({ runtimeDir }) : null;
   let dailyDigest=null;
   const instanceSync = main.enabled ? createInstanceSync({ root, runtimeDir, testMode, afterUpdate: async () => {
     if (!injectedAdapter) adapter = await createAipaAdapter(root, { contextBudgetBytes });
@@ -583,7 +585,7 @@ export async function createHub({ root, runtimeDir, adapter, runner, hostname = 
       const pathname = url.pathname;
       if (!['GET', 'POST'].includes(req.method)) throw problem("Unsupported request method", 405);
       if (closing && req.method === 'POST') throw problem("Hub is stopping. Preserve your input and retry.", 503);
-      const nodeChannel = nodes && ['/api/nodes/poll', '/api/nodes/ack'].includes(pathname);
+      const nodeChannel = nodes && ['/api/nodes/poll', '/api/nodes/ack', '/api/nodes/tasks/claim', '/api/nodes/tasks/beat', '/api/nodes/tasks/ack'].includes(pathname);
       if (req.method === 'POST' && !nodeChannel) {
         if (req.headers.origin !== origin) throw problem("Request origin mismatch", 403);
       }
@@ -598,10 +600,11 @@ export async function createHub({ root, runtimeDir, adapter, runner, hostname = 
       if (req.method === 'GET' && pathname === '/readyz') {
         const r = readiness(); return send(res, { ready: !r.closing && !r.maintenance, role: r.role, releaseId: r.releaseId, core: r.core }, r.closing || r.maintenance ? 503 : 200);
       }
-      if (req.method === 'POST' && nodeChannel) {
+      if (req.method === 'POST' && nodeChannel && !pathname.startsWith('/api/nodes/tasks/')) {
         const body = await bodyOf(req);
         const token = req.headers.authorization?.match(/^Bearer (\S+)$/)?.[1];
         if (pathname.endsWith('/poll')) {
+          taskQueue?.sweep();
           const before = nodes.list().find(node => node.id === body.nodeId)?.status;
           const polled = nodes.poll(body.nodeId, token, body);
           const after = nodes.list().find(node => node.id === body.nodeId)?.status;
@@ -615,6 +618,23 @@ export async function createHub({ root, runtimeDir, adapter, runner, hostname = 
           detail: { deviceId: op.nodeId, code: op.result.code, commit: op.result.commit, pushed: op.result.pushed, pushSuppressed: op.result.pushSuppressed } });
         outbox.enqueue('tool_result', `Device operation receipt: ${op.nodeId} ${op.kind} ${op.result.status} ${op.result.code}`, 'operations', `hub-node-result-${op.id}-${op.result.status}-${op.result.code}`);
         return send(res, op);
+      }
+      if (taskQueue && req.method === 'POST' && ['/api/nodes/tasks/claim', '/api/nodes/tasks/beat', '/api/nodes/tasks/ack'].includes(pathname)) {
+        const body = await bodyOf(req);
+        const token = req.headers.authorization?.match(/^Bearer (\S+)$/)?.[1];
+        const node = nodes.authenticate(body.nodeId, token);
+        if (body.installationId !== node.installationId) throw problem("Installation binding mismatch", 409);
+        if (pathname.endsWith('/claim')) {
+          const task = taskQueue.claim({ nodeId: body.nodeId });
+          if (task) activity.append({ kind: 'task', action: 'task-claim', status: 'info', summary: `${body.nodeId} claimed task ${task.id}`, detail: { deviceId: body.nodeId, taskId: task.id } });
+          return send(res, { task });
+        }
+        if (pathname.endsWith('/beat')) return send(res, taskQueue.beat({ nodeId: body.nodeId, id: body.id, leaseId: body.leaseId }));
+        const result = taskQueue.ack({ nodeId: body.nodeId, id: body.id, leaseId: body.leaseId, attempt: body.attempt, status: body.status, code: body.code, summary: body.summary, artifacts: body.artifacts });
+        activity.append({ kind: 'task', action: 'task-result', status: result.state === 'done' ? 'success' : 'blocked',
+          summary: `${body.nodeId} task ${result.id} ${result.state}`, detail: { deviceId: body.nodeId, taskId: result.id, code: result.result?.code || '', late: result.result?.late === true } });
+        outbox.enqueue('tool_result', `Task ${result.id} ${result.state}: ${String(result.result?.summary || '').slice(0, 200)}`, 'tasks', `hub-task-result-${result.id}-${result.state}`);
+        return send(res, result);
       }
       if (req.method === 'GET' && assets.has(pathname)) {
         const [file, type] = assets.get(pathname);
@@ -690,6 +710,15 @@ export async function createHub({ root, runtimeDir, adapter, runner, hostname = 
         outbox.enqueue('user_message', `Web search: ${query}`, 'operations', `hub-search-${randomUUID()}`);
       }
       if (nodes && req.method === 'GET' && pathname === '/api/nodes') return send(res, { nodes: nodes.list(), operations: nodes.operations() });
+      if (taskQueue && req.method === 'GET' && pathname === '/api/task-queue') return send(res, { tasks: taskQueue.list({ limit: Number(url.searchParams.get('limit') || 50), states: url.searchParams.get('states') || undefined }) });
+      if (taskQueue && req.method === 'POST' && pathname === '/api/task-queue') {
+        if (!localAccess) throw problem("Submit tasks from the local Main Hub page", 403);
+        const body = await bodyOf(req);
+        const task = taskQueue.submit({ ...body, id: body.id || body.requestId, createdBy: 'web' });
+        activity.append({ kind: 'task', action: 'task-submit', status: 'info', summary: `Queued task ${task.id}: ${task.prompt.slice(0, 80)}`, detail: { taskId: task.id } });
+        outbox.enqueue('user_message', `Task ${task.id}: ${task.prompt.slice(0, 200)}`, 'tasks', `hub-task-${task.id}`);
+        return send(res, task, 201);
+      }
       if (nodes && req.method === 'POST' && pathname === '/api/nodes/enroll') {
         if (!localAccess) throw problem("Register devices through the local main Hub page", 403);
         const body = await bodyOf(req);
