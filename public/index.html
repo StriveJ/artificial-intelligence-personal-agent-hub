@@ -15,6 +15,7 @@
   <link rel="stylesheet" href="/status.css">
   <link rel="stylesheet" href="/navigation.css">
   <script type="module" src="/app.js"></script>
+  <script type="module" src="/task-queue.js"></script>
 </head>
 <body>
   <section id="login" class="login-shell" hidden>
@@ -119,6 +120,19 @@
       <section id="tasks-view" class="view content-view" hidden>
         <div class="section-intro"><p class="eyebrow">KEEP THINGS UP TO DATE</p><h1>Stay up to date, on schedule.</h1><p class="muted">Tasks run automatically while the Hub device is online. Review results or run one now.</p></div>
         <div id="tasks-list" aria-live="polite"></div>
+        <section id="dispatch" aria-labelledby="dispatch-heading">
+          <div class="list-heading"><h2 id="dispatch-heading">Dispatch a task</h2><button id="dispatch-refresh" class="text-button" type="button">Refresh</button></div>
+          <p class="muted">Queue work for a Sub Hub that has an executor. Each task is leased while it runs and retried if the executor disappears.</p>
+          <form id="dispatch-form">
+            <label for="dispatch-prompt">Task</label>
+            <textarea id="dispatch-prompt" rows="3" maxlength="8000" required></textarea>
+            <label for="dispatch-cwd">Directory within the instance (optional)</label>
+            <input id="dispatch-cwd" type="text" maxlength="240" autocomplete="off">
+            <button class="primary" type="submit">Queue task</button>
+            <p id="dispatch-status" class="muted" role="status"></p>
+          </form>
+          <div id="dispatch-list" aria-live="polite"></div>
+        </section>
         <details class="push-settings site-settings"><summary>Website footer and legal information</summary>
           <form id="site-settings-form">
             <fieldset id="site-settings-fields" disabled>

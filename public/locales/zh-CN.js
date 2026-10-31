@@ -592,5 +592,18 @@ export default Object.freeze({
   "{0}: {1} · {2}{3}": "{0}: {1} · {2}{3}",
   "AIPA": "AIPA",
   "https://searx.example.com": "https://searx.example.com",
-  "https://example.com/feed.xml": "https://example.com/feed.xml"
+  "https://example.com/feed.xml": "https://example.com/feed.xml",
+  "Dispatch a task": "派发任务",
+  "Queue work for a Sub Hub that has an executor. Each task is leased while it runs and retried if the executor disappears.": "把任务排进队列，交给装有执行器的子端。任务运行期间持有租约，执行器失联会自动重试。",
+  "Task": "任务",
+  "Directory within the instance (optional)": "实例内的目录（可选）",
+  "Queue task": "提交任务",
+  "Queued": "排队中",
+  "Timeout": "超时",
+  "Attempt": "第几次尝试",
+  "No dispatched tasks yet.": "还没有派发过任务。",
+  "Task queued.": "任务已入队。",
+  "Queueing…": "提交中…",
+  "Task queue unavailable": "任务队列不可用",
+  "Could not queue the task": "任务提交失败"
 });

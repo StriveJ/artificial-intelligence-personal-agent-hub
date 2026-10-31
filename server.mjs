@@ -69,6 +69,7 @@ const assets = new Map([
   ['/json-api.js', ['json-api.js', 'text/javascript; charset=utf-8']],
   ['/navigation.js', ['navigation.js', 'text/javascript; charset=utf-8']],
   ['/task-list.js', ['task-list.js', 'text/javascript; charset=utf-8']],
+  ['/task-queue.js', ['task-queue.js', 'text/javascript; charset=utf-8']],
   ['/updates.js', ['updates.js', 'text/javascript; charset=utf-8']],
   ['/status.js', ['status.js', 'text/javascript; charset=utf-8']],
   ['/conflict-review.js', ['conflict-review.js', 'text/javascript; charset=utf-8']],

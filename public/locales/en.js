@@ -593,5 +593,18 @@ export default Object.freeze({
   "{0}: {1} · {2}{3}": "{0}: {1} · {2}{3}",
   "AIPA": "AIPA",
   "https://searx.example.com": "https://searx.example.com",
-  "https://example.com/feed.xml": "https://example.com/feed.xml"
+  "https://example.com/feed.xml": "https://example.com/feed.xml",
+  "Dispatch a task": "Dispatch a task",
+  "Queue work for a Sub Hub that has an executor. Each task is leased while it runs and retried if the executor disappears.": "Queue work for a Sub Hub that has an executor. Each task is leased while it runs and retried if the executor disappears.",
+  "Task": "Task",
+  "Directory within the instance (optional)": "Directory within the instance (optional)",
+  "Queue task": "Queue task",
+  "Queued": "Queued",
+  "Timeout": "Timeout",
+  "Attempt": "Attempt",
+  "No dispatched tasks yet.": "No dispatched tasks yet.",
+  "Task queued.": "Task queued.",
+  "Queueing…": "Queueing…",
+  "Task queue unavailable": "Task queue unavailable",
+  "Could not queue the task": "Could not queue the task"
 });

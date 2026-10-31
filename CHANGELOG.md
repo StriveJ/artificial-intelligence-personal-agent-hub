@@ -6,6 +6,7 @@
 - Tasks carry a lease: a worker that stops renewing loses the task after `leaseSeconds`, the queue retries it with backoff, and after three attempts it closes as `timeout` / `lease-expired`. A result that arrives from the attempt that expired is still accepted, marked `late`, so finished work is not thrown away and re-run.
 - Fairness and bounds: claims prefer work this device did not already fail, queued tasks are capped, and finished tasks are pruned. Prompt, `cwd` (relative to the instance root), budget and timeout are validated on submission.
 - Execution is injected and disabled by default: a Sub Hub without an executor never claims, so old nodes are unaffected. Protocol stays at version 1; task endpoints are additive and never ride in the existing `operations` array.
+- Add a Dispatch panel to the Tasks page: write a task, optionally name a directory inside the instance, and watch it move from queued to running to succeeded/failed, with the executor's summary and changed files. The panel refreshes while the page is visible.
 
 ## 1.1.0
 
