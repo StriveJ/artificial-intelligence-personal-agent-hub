@@ -174,3 +174,21 @@ test("an untargeted task stays open to any device", t => {
   assert.equal(queue.get('task-0001').targetNode, null);
   assert.equal(queue.claim({ nodeId: 'whatever' }).id, 'task-0001');
 });
+test("tasks in one thread carry earlier results to the next claim", t => {
+  const runtimeDir = temp(t), time = clock();
+  const queue = createTaskQueue({ runtimeDir, now: time.now });
+  const first = queue.submit({ id: 'task-0001', prompt: "First step", thread: 'thr-a', timeoutMs: 30_000, leaseSeconds: 60 });
+  assert.equal(first.thread, 'thr-a');
+  const claimed = queue.claim({ nodeId: 'sub-a' });
+  assert.deepEqual(claimed.thread.tail, []);
+  queue.ack({ nodeId: 'sub-a', id: 'task-0001', leaseId: claimed.leaseId, status: 'done', summary: "Did the first step" });
+  time.advance(1_000);
+  queue.submit({ id: 'task-0002', prompt: "Second step", thread: 'thr-a', timeoutMs: 30_000, leaseSeconds: 60 });
+  const next = queue.claim({ nodeId: 'sub-a' });
+  assert.equal(next.id, 'task-0002');
+  assert.equal(next.thread.id, 'thr-a');
+  assert.equal(next.thread.tail.length, 1);
+  assert.match(next.thread.tail[0].summary, /first step/);
+  assert.equal(queue.list({ thread: 'thr-a' }).length, 2);
+  assert.equal(queue.list({ thread: 'other' }).length, 0);
+});

@@ -85,3 +85,12 @@ test("an ack failure does not crash the worker; the lease simply expires", async
   const worker = createTaskWorker({ post, enabled: true, runner: async () => ({ summary: "ok" }) });
   assert.equal(await worker.drain(), 1);
 });
+
+test("the worker passes the thread context to the executor", async () => {
+  const main = fakeMain([task({ thread: { id: 'thr-a', tail: [{ prompt: "earlier", summary: "done before" }] } })]);
+  let received = null;
+  const worker = createTaskWorker({ post: main.post, enabled: true, runner: async input => { received = input; return { summary: "ok" }; } });
+  await worker.drain();
+  assert.equal(received.thread.id, 'thr-a');
+  assert.equal(received.thread.tail[0].summary, 'done before');
+});

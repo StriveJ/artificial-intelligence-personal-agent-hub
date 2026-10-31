@@ -616,5 +616,7 @@ export default Object.freeze({
   "Dispatch a task.": "派发一个任务。",
   "Rename": "重命名",
   "Device name": "子端名称",
-  "Device name updated": "子端名称已更新"
+  "Device name updated": "子端名称已更新",
+  "Thread (optional)": "线程（可选）",
+  "Thread": "线程"
 });

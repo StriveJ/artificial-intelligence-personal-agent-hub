@@ -617,5 +617,7 @@ export default Object.freeze({
   "Dispatch a task.": "Dispatch a task.",
   "Rename": "Rename",
   "Device name": "Device name",
-  "Device name updated": "Device name updated"
+  "Device name updated": "Device name updated",
+  "Thread (optional)": "Thread (optional)",
+  "Thread": "Thread"
 });

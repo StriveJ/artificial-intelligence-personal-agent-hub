@@ -80,3 +80,15 @@ test("a missing Harness entry fails before running anything", async t => {
   const executor = createHarnessExecutor({ root, entry: join(root, 'not-installed.mjs'), env: { PATH: process.env.PATH } });
   await assert.rejects(() => executor.run({ prompt: "x" }), err => err.code === 'executor-missing');
 });
+
+test("the executor prepends earlier results from the same thread", async t => {
+  const root = instance(t), entry = stub(root);
+  const executor = createHarnessExecutor({ root, entry, env: { PATH: process.env.PATH } });
+  const result = await executor.run({
+    prompt: "Continue the work",
+    timeoutMs: 10_000,
+    thread: { id: 'thr-a', tail: [{ prompt: "First step", summary: "Wrote the parser" }] },
+  });
+  assert.match(result.summary, /Wrote the parser/);
+  assert.match(result.summary, /Continue the work/);
+});

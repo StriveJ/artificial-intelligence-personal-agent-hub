@@ -711,7 +711,7 @@ export async function createHub({ root, runtimeDir, adapter, runner, hostname = 
         outbox.enqueue('user_message', `Web search: ${query}`, 'operations', `hub-search-${randomUUID()}`);
       }
       if (nodes && req.method === 'GET' && pathname === '/api/nodes') return send(res, { nodes: nodes.list(), operations: nodes.operations() });
-      if (taskQueue && req.method === 'GET' && pathname === '/api/task-queue') return send(res, { tasks: taskQueue.list({ limit: Number(url.searchParams.get('limit') || 50), states: url.searchParams.get('states') || undefined }) });
+      if (taskQueue && req.method === 'GET' && pathname === '/api/task-queue') return send(res, { tasks: taskQueue.list({ limit: Number(url.searchParams.get('limit') || 50), states: url.searchParams.get('states') || undefined, thread: url.searchParams.get('thread') || undefined }) });
       if (taskQueue && req.method === 'POST' && pathname === '/api/task-queue') {
         // Any signed-in session may dispatch: the pairing code is the authorization, and a
         // proxied public session is how the owner usually reaches the Hub.

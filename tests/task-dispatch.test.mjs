@@ -124,9 +124,25 @@ test("a proxied public session can rename and dispatch", async t => {
   const { origin, Cookie, node, session } = await hubWithNode(t);
   await node('/api/nodes/poll', { capabilities: { protocolMin: 1, protocolMax: 1, tasks: true } });
   const proxied = (path, body) => fetch(origin + path, { method: 'POST', headers: { Origin: origin, 'Content-Type': 'application/json', Cookie, 'X-Forwarded-For': '203.0.113.9' }, body: JSON.stringify(body) });
-  assert.equal((await proxied('/api/nodes/lan-1/rename', { name: '车间服务器' })).status, 200);
+  assert.equal((await proxied('/api/nodes/lan-1/rename', { name: '\u8f66\u95f4\u670d\u52a1\u5668' })).status, 200);
   const submitted = await proxied('/api/task-queue', { prompt: "Run from a proxied session", nodeId: 'lan-1', timeoutMs: 60_000 });
   assert.equal(submitted.status, 201);
   assert.equal((await submitted.json()).targetNode, 'lan-1');
   assert.ok(session);
+});
+test("a follow-up task in the same thread receives the earlier result", async t => {
+  const { node, session } = await hubWithNode(t);
+  await node('/api/nodes/poll', { capabilities: { protocolMin: 1, protocolMax: 1, tasks: true } });
+  const first = await (await session('/api/task-queue', { prompt: "First step", thread: 'thr-a', timeoutMs: 60_000 })).json();
+  assert.equal(first.thread, 'thr-a');
+  const claimed = await (await node('/api/nodes/tasks/claim', {})).json();
+  await node('/api/nodes/tasks/ack', { id: claimed.task.id, leaseId: claimed.task.leaseId, attempt: 1, status: 'done', summary: "Wrote the parser" });
+  const second = await (await session('/api/task-queue', { prompt: "Second step", thread: 'thr-a', timeoutMs: 60_000 })).json();
+  const next = await (await node('/api/nodes/tasks/claim', {})).json();
+  assert.equal(next.task.id, second.id);
+  assert.equal(next.task.thread.id, 'thr-a');
+  assert.equal(next.task.thread.tail.length, 1);
+  assert.match(next.task.thread.tail[0].summary, /parser/);
+  const listed = await (await session('/api/task-queue?thread=thr-a', null, 'GET')).json();
+  assert.equal(listed.tasks.length, 2);
 });

@@ -28,6 +28,7 @@ export function mountTaskQueuePanel(doc = document, win = window) {
   if (!form || !list) return null;
   const prompt = doc.getElementById('dispatch-prompt');
   const cwd = doc.getElementById('dispatch-cwd');
+  const threadField = doc.getElementById('dispatch-thread');
   const nodeSelect = doc.getElementById('dispatch-node');
   const nodeHelp = doc.getElementById('dispatch-node-help');
   const status = doc.getElementById('dispatch-status');
@@ -76,7 +77,8 @@ export function mountTaskQueuePanel(doc = document, win = window) {
     setText(badge, () => t(STATES[task.state] || task.state));
     heading.append(title, badge);
     const target = task.targetNode ? ` · ${task.targetNode}` : '';
-    const meta = element(doc, 'p', 'muted', `${new Date(task.createdAt).toLocaleString()}${target} · ${t("Attempt")} ${task.attempts}`);
+    const thread = task.thread ? ` · ${t("Thread")} ${task.thread}` : '';
+    const meta = element(doc, 'p', 'muted', `${new Date(task.createdAt).toLocaleString()}${target}${thread} · ${t("Attempt")} ${task.attempts}`);
     card.append(heading, meta);
     if (task.result?.summary) card.append(element(doc, 'p', 'task-result', task.result.summary));
     if (task.result?.artifacts?.length) card.append(element(doc, 'p', 'muted', task.result.artifacts.join(' · ')));
@@ -107,7 +109,7 @@ export function mountTaskQueuePanel(doc = document, win = window) {
       const response = await fetch('/api/task-queue', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ prompt: text, cwd: cwd?.value.trim() || '', nodeId: nodeSelect?.value || undefined }),
+        body: JSON.stringify({ prompt: text, cwd: cwd?.value.trim() || '', thread: threadField?.value.trim() || undefined, nodeId: nodeSelect?.value || undefined }),
       });
       const data = await response.json().catch(() => ({}));
       if (!response.ok) throw new Error(data.error || `HTTP ${response.status}`);
