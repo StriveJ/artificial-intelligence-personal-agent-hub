@@ -1,8 +1,10 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { mkdirSync, mkdtempSync, rmSync } from 'node:fs';
+import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from 'node:fs';
 import { join, resolve, sep } from 'node:path';
+import { execFileSync } from 'node:child_process';
 import { createNodeControl } from '../lib/node-control.mjs';
+import { createMainHub } from '../main-server.mjs';
 
 const TMP = resolve('aipa-test-tmp');
 mkdirSync(TMP, { recursive: true });
@@ -74,4 +76,28 @@ test("a removed device releases its member name", t => {
   nodes.ack(a.id, a.token, { id: op.id, status: 'success', code: 'cleared' });
   poll(nodes, b, { member: { name: 'helper' } });
   assert.equal(nodes.resolve('helper'), 'node-b');
+});
+
+test("the Main Hub resolves a device operation addressed by member name", async t => {
+  const base = temp(t), root = join(base, 'instance'), runtimeDir = join(base, 'runtime');
+  mkdirSync(root); mkdirSync(runtimeDir, { recursive: true }); mkdirSync(join(root, 'user-space'), { recursive: true });
+  writeFileSync(join(root, 'AIPA-MANIFEST.yaml'), 'owner: synthetic-test\nversion: 1\n');
+  execFileSync('git', ['init', root], { stdio: 'pipe' });
+  const adapter = { owner: 'test', version: '1', requiresConsent: () => false, begin: async () => null, record: async () => null, context: async () => ({ prompt: 'test', sources: [], omitted: 0 }), search: async () => [], allowedContent: () => true };
+  const hub = await createMainHub({ root, runtimeDir, port: 0, testMode: true, tasks: { 'repo-sync': { enabled: false } }, adapter, runner: async () => 'unused' });
+  t.after(async () => { await hub.close(); });
+  const origin = await hub.listen();
+  const login = await fetch(origin + '/api/local-login', { method: 'POST', headers: { Origin: origin, 'Content-Type': 'application/json' }, body: '{}' });
+  const Cookie = (login.headers.get('set-cookie') || '').split(';')[0];
+  const enrolled = await (await fetch(origin + '/api/nodes/enroll', { method: 'POST', headers: { Origin: origin, 'Content-Type': 'application/json', Cookie }, body: JSON.stringify({ id: 'lan-1' }) })).json();
+  const poll = extra => fetch(origin + '/api/nodes/poll', { method: 'POST', headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${enrolled.token}` }, body: JSON.stringify({ nodeId: 'lan-1', installationId: enrolled.installationId, ...extra }) });
+  await poll({ member: { name: 'Lan Helper' } });
+  const list = await (await fetch(origin + '/api/nodes', { headers: { Cookie } })).json();
+  assert.equal(list.nodes[0].member.name, 'Lan Helper');
+  const byName = await fetch(origin + '/api/nodes/' + encodeURIComponent('Lan Helper') + '/sync', { method: 'POST', headers: { Origin: origin, 'Content-Type': 'application/json', Cookie }, body: JSON.stringify({ id: 'op-by-name-1' }) });
+  assert.equal(byName.status, 202);
+  const polled = await (await poll({})).json();
+  assert.equal(polled.operations[0].id, 'op-by-name-1');
+  const missing = await fetch(origin + '/api/nodes/nobody/sync', { method: 'POST', headers: { Origin: origin, 'Content-Type': 'application/json', Cookie }, body: '{}' });
+  assert.equal(missing.status, 404);
 });
