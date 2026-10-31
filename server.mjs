@@ -697,9 +697,12 @@ export async function createHub({ root, runtimeDir, adapter, runner, hostname = 
         activity.append({ kind: 'device', action: 'node-enroll', status: 'success', summary: `Register sub Hub ${enrolled.id}`, detail: { deviceId: enrolled.id } });
         return send(res, enrolled, 201);
       }
-      const nodeAction = pathname.match(/^\/api\/nodes\/([a-zA-Z0-9_-]{3,80})\/(sync|clear|offline)$/);
+      const nodeAction = pathname.match(/^\/api\/nodes\/([^/]{1,120})\/(sync|clear|offline)$/);
       if (nodes && req.method === 'POST' && nodeAction) {
-        const body = await bodyOf(req), [, id, kind] = nodeAction;
+        const body = await bodyOf(req), [, ref, kind] = nodeAction;
+        let decoded; try { decoded = decodeURIComponent(ref); } catch { throw problem("Invalid device reference", 400); }
+        const id = nodes.resolve(decoded);
+        if (!id) throw problem("Device not found", 404);
         const op = kind === 'offline' ? (nodes.offline(id), { status: 'success' }) : nodes.request(id, kind, body.id);
         const action = kind === 'sync' ? "Immediate synchronization requested" : kind === 'clear' ? "Clear and remove from device list requested" : "Marked offline";
         activity.append({ kind: 'device', action: 'node-' + kind, status: 'info', summary: `${id} ${action}`, detail: { deviceId: id } });

@@ -6,5 +6,13 @@
   "installationId": "REPLACE_WITH_OWNER_ENROLLMENT",
   "token": "REPLACE_WITH_DEVICE_TOKEN",
   "engine": "codex",
-  "testMode": true
+  "testMode": true,
+  "member": {
+    "name": "Assistant",
+    "aliases": ["helper"],
+    "persona": {
+      "tone": "concise, direct, no flattery",
+      "initiative": "normal"
+    }
+  }
 }

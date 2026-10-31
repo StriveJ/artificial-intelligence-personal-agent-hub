@@ -1,5 +1,10 @@
 # Changelog
 
+## Unreleased
+
+- Advertise a member identity from a Sub Hub (`member.name`, `member.aliases`, `member.persona`). The Main Hub stores it with the device, returns it from `GET /api/nodes`, and resolves device operations (`sync` / `clear` / `offline`) by member name or alias as well as by the stable device ID.
+- Member names are unique across live devices and are released when a device is removed. Names and aliases are 1-40 letters, digits, spaces, dots, hyphens or underscores. Persona is limited to presentation fields (`tone`, `initiative`); unknown fields are refused. Devices that never advertise a member behave exactly as before, and the Main/Sub protocol stays at version 1.
+
 ## 1.1.0
 
 - Add English and Simplified Chinese interface switching with browser-language detection, persistent browser preferences, and immediate updates that preserve drafts and unsaved form fields.

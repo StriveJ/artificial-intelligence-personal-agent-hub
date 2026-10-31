@@ -28,7 +28,7 @@ function mainURL(value) {
   return url.origin;
 }
 export async function createSubHub(config) {
-  const { root, runtimeDir, nodeId, installationId, token, engine = 'codex', testMode = true } = config;
+  const { root, runtimeDir, nodeId, installationId, token, engine = 'codex', testMode = true, member = null } = config;
   if (!root || !runtimeDir || !nodeId || !installationId || typeof token !== 'string') throw new Error("Incomplete sub Hub configuration");
   if (!['codex', 'claude', 'harness'].includes(engine)) throw new Error("Invalid model engine");
   if (testMode === false && existsSync(join(root, '.git/aipa-hub-no-push.json'))) throw new Error("A permanent test instance cannot start as a production instance");
@@ -91,7 +91,7 @@ export async function createSubHub(config) {
     cycling = (async () => {
       void sync.tick();
       try {
-        const { operations, protocol, compatible } = await post('/api/nodes/poll', { sync: sync.status().result, taskBusy: Boolean(sync.gate.state()), capabilities: { protocolMin:HUB_PROTOCOL.min, protocolMax:HUB_PROTOCOL.max, releaseId: process.env.AIPA_HUB_RELEASE_ID || 'development', deploymentGeneration: Number(process.env.AIPA_HUB_DEPLOYMENT_GENERATION || 0), runtimeSchema:HUB_RUNTIME_SCHEMA, updaterVersion: process.send ? 1 : null, platform: process.platform, arch: process.arch, testMode } });
+        const { operations, protocol, compatible } = await post('/api/nodes/poll', { sync: sync.status().result, taskBusy: Boolean(sync.gate.state()), ...(member ? { member } : {}), capabilities: { protocolMin:HUB_PROTOCOL.min, protocolMax:HUB_PROTOCOL.max, releaseId: process.env.AIPA_HUB_RELEASE_ID || 'development', deploymentGeneration: Number(process.env.AIPA_HUB_DEPLOYMENT_GENERATION || 0), runtimeSchema:HUB_RUNTIME_SCHEMA, updaterVersion: process.send ? 1 : null, platform: process.platform, arch: process.arch, testMode } });
         if (compatible === false || protocol !== undefined && (protocol<HUB_PROTOCOL.min||protocol>HUB_PROTOCOL.max)) throw new Error("Main/sub protocol incompatible");
         connection = { status: 'online', lastSeen: new Date().toISOString() };
         for (const op of operations) {
