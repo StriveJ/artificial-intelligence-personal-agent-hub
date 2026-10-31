@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { mkdirSync, mkdtempSync, rmSync } from 'node:fs';
+import { mkdirSync, mkdtempSync, rmSync, writeFileSync, readFileSync, existsSync } from 'node:fs';
 import { join, resolve, sep } from 'node:path';
 import { createTaskQueue } from '../lib/task-queue.mjs';
 
@@ -144,4 +144,16 @@ test("the queue survives a restart and lists by state", t => {
   assert.equal(queue.list({ states: 'leased' }).length, 1);
   assert.equal(queue.list({ limit: 1 }).length, 1);
   assert.equal(queue.get('task-0002').state, 'queued');
+});
+
+test("the scheduler task file is neither read nor overwritten", t => {
+  const runtimeDir = temp(t);
+  const schedulerFile = join(runtimeDir, 'tasks.json');
+  const original = JSON.stringify({ version: 1, tasks: { 'main-day-start': { status: 'success', dailyAt: '08:00' } } });
+  writeFileSync(schedulerFile, original);
+  const queue = createTaskQueue({ runtimeDir, now: () => 1000 });
+  assert.deepEqual(queue.list(), [], "a foreign file must not be treated as the queue");
+  queue.submit({ id: 'task-0001', prompt: "First real task" });
+  assert.equal(readFileSync(schedulerFile, 'utf8'), original, "the scheduler file must stay untouched");
+  assert.ok(existsSync(join(runtimeDir, 'task-queue.json')));
 });
