@@ -20,6 +20,7 @@ import {ownsTaskLease} from './lib/task-gate.mjs';
 import {modelProfile} from './lib/model-profile.mjs';
 import {hubSupport,HUB_PROTOCOL,HUB_RUNTIME_SCHEMA} from './lib/support-contract.mjs';
 import {createTaskWorker} from './lib/task-worker.mjs';
+import {createHarnessExecutor} from './lib/task-executor.mjs';
 export { ipcPath, subCommand } from './lib/sub-ipc.mjs';
 
 const digest = value => createHash('sha256').update(value).digest();
@@ -41,9 +42,22 @@ export async function createSubHub(config) {
   const sync = createInstanceSync({ root, runtimeDir, testMode });
   // Task execution is opt-in: without an injected executor the Sub Hub never claims work,
   // so a Main Hub simply sees a device that does not accept tasks.
+  const taskRunner = (() => {
+    if (typeof config.taskRunner === 'function') return config.taskRunner;
+    if (config.tasks?.enabled !== true) return null;
+    const entry = config.tasks.entry || process.env.AIPA_HARNESS_ENTRY;
+    if (!entry) return null;
+    const executor = createHarnessExecutor({
+      root, entry,
+      model: config.tasks.model || null,
+      baseUrl: config.tasks.baseUrl || process.env.DEEPSEEK_BASE_URL || null,
+      apiKey: config.tasks.apiKey || process.env.DEEPSEEK_API_KEY || null,
+    });
+    return input => executor.run(input);
+  })();
   const taskWorker = createTaskWorker({
     post,
-    runner: typeof config.taskRunner === 'function' ? config.taskRunner : null,
+    runner: taskRunner,
     enabled: config.tasks?.enabled === true,
     intervalMs: Number(config.tasks?.intervalMs) || 5000,
   });
