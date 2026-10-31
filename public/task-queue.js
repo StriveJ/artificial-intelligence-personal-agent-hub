@@ -50,6 +50,8 @@ export function mountTaskQueuePanel(doc = document, win = window) {
       if (!response.ok) throw new Error(`HTTP ${response.status}`);
       const data = await response.json();
       eligible = (data.nodes || []).filter(node => node.capabilities && node.capabilities.tasks === true);
+      // Do not rebuild the list while someone is choosing, or the open menu closes.
+      if (doc.activeElement === nodeSelect) return;
       const previous = nodeSelect.value;
       nodeSelect.replaceChildren(
         option(doc, '', t("Any device that can run tasks")),
