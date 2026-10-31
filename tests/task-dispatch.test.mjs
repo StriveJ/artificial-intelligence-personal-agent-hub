@@ -120,3 +120,13 @@ test("two live devices cannot share a name", async t => {
   const clash = await session('/api/nodes/lan-2/rename', { name: 'shared' });
   assert.equal(clash.status, 409);
 });
+test("a proxied public session can rename and dispatch", async t => {
+  const { origin, Cookie, node, session } = await hubWithNode(t);
+  await node('/api/nodes/poll', { capabilities: { protocolMin: 1, protocolMax: 1, tasks: true } });
+  const proxied = (path, body) => fetch(origin + path, { method: 'POST', headers: { Origin: origin, 'Content-Type': 'application/json', Cookie, 'X-Forwarded-For': '203.0.113.9' }, body: JSON.stringify(body) });
+  assert.equal((await proxied('/api/nodes/lan-1/rename', { name: '车间服务器' })).status, 200);
+  const submitted = await proxied('/api/task-queue', { prompt: "Run from a proxied session", nodeId: 'lan-1', timeoutMs: 60_000 });
+  assert.equal(submitted.status, 201);
+  assert.equal((await submitted.json()).targetNode, 'lan-1');
+  assert.ok(session);
+});

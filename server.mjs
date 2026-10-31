@@ -713,7 +713,8 @@ export async function createHub({ root, runtimeDir, adapter, runner, hostname = 
       if (nodes && req.method === 'GET' && pathname === '/api/nodes') return send(res, { nodes: nodes.list(), operations: nodes.operations() });
       if (taskQueue && req.method === 'GET' && pathname === '/api/task-queue') return send(res, { tasks: taskQueue.list({ limit: Number(url.searchParams.get('limit') || 50), states: url.searchParams.get('states') || undefined }) });
       if (taskQueue && req.method === 'POST' && pathname === '/api/task-queue') {
-        if (!localAccess) throw problem("Submit tasks from the local Main Hub page", 403);
+        // Any signed-in session may dispatch: the pairing code is the authorization, and a
+        // proxied public session is how the owner usually reaches the Hub.
         const body = await bodyOf(req);
         const target = body.nodeId === undefined || body.nodeId === null || body.nodeId === '' ? null : String(body.nodeId);
         if (target) {
@@ -735,7 +736,7 @@ export async function createHub({ root, runtimeDir, adapter, runner, hostname = 
       }
       const nodeRename = pathname.match(/^\/api\/nodes\/([^/]{1,120})\/rename$/);
       if (nodes && req.method === 'POST' && nodeRename) {
-        if (!localAccess) throw problem("Rename devices from the local Main Hub page", 403);
+        // Renaming is presentation only (no credentials change), so a signed-in session is enough.
         const body = await bodyOf(req);
         let decoded; try { decoded = decodeURIComponent(nodeRename[1]); } catch { throw problem("Invalid device reference", 400); }
         const renamed = nodes.rename(decoded, body.name);
