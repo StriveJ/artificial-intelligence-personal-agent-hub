@@ -619,5 +619,8 @@ export default Object.freeze({
   "Device name": "Device name",
   "Device name updated": "Device name updated",
   "Thread (optional)": "Thread (optional)",
-  "Thread": "Thread"
+  "Thread": "Thread",
+  "Confirm with your pairing code to dispatch": "Confirm with your pairing code to dispatch",
+  "Dispatch was not confirmed": "Dispatch was not confirmed",
+  "Incorrect pairing code": "Incorrect pairing code"
 });

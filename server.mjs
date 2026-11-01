@@ -212,6 +212,10 @@ export async function createHub({ root, runtimeDir, adapter, runner, hostname = 
   hostname = hostname.toLowerCase();
   const allowedHosts = new Set(['localhost', '127.0.0.1', '[::1]', ...(hostname ? [hostname] : [])]);
   const attempts = new Map();
+  // Dispatching is a step up: a session must re-confirm the pairing code, so a stolen
+  // cookie alone cannot execute commands on a Sub Hub.
+  const dispatchUnlocks = new Map();
+  const DISPATCH_WINDOW_MS = 15 * 60_000;
   const queue = [];
   let busy = false, closing = false, draining = Promise.resolve(), maintenance = false, activeRequests = 0, wakeTimer;
   let modelQueue = Promise.resolve();
@@ -265,6 +269,9 @@ export async function createHub({ root, runtimeDir, adapter, runner, hostname = 
     const key = randomBytes(32).toString('base64url');
     auth.sessions.push({ hash: digest(key), expires: Date.now() + 30 * 86400_000 }); saveAuth();
     res.setHeader('Set-Cookie', `aipa_hub=${key}; Path=/; HttpOnly; SameSite=Strict; Max-Age=2592000${secure ? '; Secure' : ''}`);
+  }
+  function sessionKey(req) {
+    return req.headers.cookie?.split(';').map(s => s.trim()).find(s => s.startsWith('aipa_hub='))?.slice(9) || '';
   }
   function authenticated(req) {
     const key = req.headers.cookie?.split(';').map(s => s.trim()).find(s => s.startsWith('aipa_hub='))?.slice(9);
@@ -718,7 +725,19 @@ export async function createHub({ root, runtimeDir, adapter, runner, hostname = 
       }
       if (nodes && req.method === 'GET' && pathname === '/api/nodes') return send(res, { nodes: nodes.list(), operations: nodes.operations() });
       if (taskQueue && req.method === 'GET' && pathname === '/api/task-queue') return send(res, { tasks: taskQueue.list({ limit: Number(url.searchParams.get('limit') || 50), states: url.searchParams.get('states') || undefined, thread: url.searchParams.get('thread') || undefined }) });
+      if (req.method === 'POST' && pathname === '/api/dispatch/unlock') {
+        const body = await bodyOf(req);
+        if (typeof body.code !== 'string' || !equal(body.code, auth.pairingCode)) {
+          activity.append({ kind: 'system', action: 'dispatch-unlock', status: 'failed', summary: "Incorrect pairing code for dispatch (rejected)" });
+          throw problem("Incorrect pairing code", 401);
+        }
+        const until = Date.now() + DISPATCH_WINDOW_MS;
+        dispatchUnlocks.set(digest(sessionKey(req)), until);
+        activity.append({ kind: 'system', action: 'dispatch-unlock', status: 'success', summary: "Dispatch unlocked for this session" });
+        return send(res, { ok: true, until });
+      }
       if (taskQueue && req.method === 'POST' && pathname === '/api/task-queue') {
+        if (!(dispatchUnlocks.get(digest(sessionKey(req))) > Date.now())) throw Object.assign(problem("Confirm the pairing code before dispatching", 403), { code: 'dispatch-locked' });
         // Any signed-in session may dispatch: the pairing code is the authorization, and a
         // proxied public session is how the owner usually reaches the Hub.
         const body = await bodyOf(req);
@@ -975,7 +994,8 @@ export async function createHub({ root, runtimeDir, adapter, runner, hostname = 
     } catch (error) {
       if (!res.headersSent) {
         const message = error.status ? error.message : "Local records cannot be processed right now. Check Hub runtime status.";
-        send(res, req.url?.startsWith('/api/admin/updates/') ? { code: `HTTP_${error.status || 500}`, message } : { error: message }, error.status || 500);
+        const body = { error: message, ...(error.code ? { code: error.code } : {}) };
+        send(res, req.url?.startsWith('/api/admin/updates/') ? { code: `HTTP_${error.status || 500}`, message } : body, error.status || 500);
         noteAccess(req, error.status || 500);
       }
       else res.end();

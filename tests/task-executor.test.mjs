@@ -97,3 +97,16 @@ test("the executor refuses a working directory inside .git", async t => {
   const executor = createHarnessExecutor({ root, entry: join(root, 'stub.mjs') });
   await assert.rejects(() => executor.run({ prompt: "x", cwd: '.git' }), error => error.code === 'cwd-forbidden');
 });
+test("a task runs in a worktree and its changes are applied back", async t => {
+  const root = instance(t);
+  writeFileSync(join(root, 'README.md'), 'hello\n');
+  execFileSync('git', ['-C', root, 'add', '-A'], { stdio: 'pipe' });
+  execFileSync('git', ['-C', root, 'commit', '-q', '-m', 'init'], { stdio: 'pipe' });
+  const entry = join(temp(t), 'stub.mjs');
+  writeFileSync(entry, STUB);
+  const executor = createHarnessExecutor({ root, entry, env: { PATH: process.env.PATH } });
+  const result = await executor.run({ prompt: "write the output file", timeoutMs: 20_000 });
+  assert.equal(result.isolated, true, "a committed instance must run in a worktree");
+  assert.equal(result.applied, true);
+  assert.ok(existsSync(join(root, 'out.txt')), "the result must be applied back to the instance");
+});

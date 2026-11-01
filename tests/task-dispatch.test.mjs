@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from 'node:fs';
+import { mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
 import { join, resolve, sep } from 'node:path';
 import { execFileSync } from 'node:child_process';
 import { createMainHub } from '../main-server.mjs';
@@ -14,7 +14,7 @@ function temp(t) {
 }
 const adapter = { owner: 'test', version: '1', requiresConsent: () => false, begin: async () => null, record: async () => null, context: async () => ({ prompt: 'test', sources: [], omitted: 0 }), search: async () => [], allowedContent: () => true };
 
-async function hubWithNode(t) {
+async function hubWithNode(t, { unlock = true } = {}) {
   const base = temp(t), root = join(base, 'instance'), runtimeDir = join(base, 'runtime');
   mkdirSync(root); mkdirSync(runtimeDir, { recursive: true }); mkdirSync(join(root, 'user-space'), { recursive: true });
   writeFileSync(join(root, 'AIPA-MANIFEST.yaml'), 'owner: synthetic-test\nversion: 1\n');
@@ -27,6 +27,11 @@ async function hubWithNode(t) {
   const enrolled = await (await fetch(origin + '/api/nodes/enroll', { method: 'POST', headers: { Origin: origin, 'Content-Type': 'application/json', Cookie }, body: JSON.stringify({ id: 'lan-1' }) })).json();
   const node = (path, body) => fetch(origin + path, { method: 'POST', headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${enrolled.token}` }, body: JSON.stringify({ nodeId: 'lan-1', installationId: enrolled.installationId, ...body }) });
   const session = (path, body, method = 'POST') => fetch(origin + path, { method, headers: { Origin: origin, 'Content-Type': 'application/json', Cookie }, ...(body ? { body: JSON.stringify(body) } : {}) });
+  if (unlock) {
+    const code = JSON.parse(readFileSync(join(runtimeDir, 'access.json'), 'utf8')).pairingCode;
+    const opened = await session('/api/dispatch/unlock', { code });
+    if (opened.status !== 200) throw new Error('dispatch unlock failed');
+  }
   return { origin, Cookie, enrolled, node, session };
 }
 
@@ -145,4 +150,11 @@ test("a follow-up task in the same thread receives the earlier result", async t 
   assert.match(next.task.thread.tail[0].summary, /parser/);
   const listed = await (await session('/api/task-queue?thread=thr-a', null, 'GET')).json();
   assert.equal(listed.tasks.length, 2);
+});
+
+test("dispatching requires confirming the pairing code", async t => {
+  const { session } = await hubWithNode(t, { unlock: false });
+  const denied = await session('/api/task-queue', { prompt: "Inspect the build" });
+  assert.equal(denied.status, 403);
+  assert.equal((await denied.json()).code, 'dispatch-locked');
 });

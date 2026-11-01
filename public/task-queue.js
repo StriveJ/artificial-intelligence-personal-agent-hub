@@ -105,13 +105,23 @@ export function mountTaskQueuePanel(doc = document, win = window) {
     const text = prompt?.value.trim() || '';
     if (!text) return;
     if (status) { status.dataset.busy = '1'; setText(status, t("Queueing…")); }
+    const send = async () => fetch('/api/task-queue', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ prompt: text, cwd: cwd?.value.trim() || '', thread: threadField?.value.trim() || undefined, nodeId: nodeSelect?.value || undefined }),
+    });
     try {
-      const response = await fetch('/api/task-queue', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ prompt: text, cwd: cwd?.value.trim() || '', thread: threadField?.value.trim() || undefined, nodeId: nodeSelect?.value || undefined }),
-      });
-      const data = await response.json().catch(() => ({}));
+      let response = await send();
+      let data = await response.json().catch(() => ({}));
+      // Dispatching is a step up: confirm with the pairing code, then retry once.
+      if (response.status === 403 && data.code === 'dispatch-locked') {
+        const code = window.prompt(t("Confirm with your pairing code to dispatch"));
+        if (!code) throw new Error(t("Dispatch was not confirmed"));
+        const unlock = await fetch('/api/dispatch/unlock', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ code }) });
+        if (!unlock.ok) throw new Error(t("Incorrect pairing code"));
+        response = await send();
+        data = await response.json().catch(() => ({}));
+      }
       if (!response.ok) throw new Error(data.error || `HTTP ${response.status}`);
       prompt.value = '';
       if (status) setText(status, t("Task queued."));

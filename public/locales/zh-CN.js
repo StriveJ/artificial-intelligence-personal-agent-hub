@@ -618,5 +618,8 @@ export default Object.freeze({
   "Device name": "子端名称",
   "Device name updated": "子端名称已更新",
   "Thread (optional)": "线程（可选）",
-  "Thread": "线程"
+  "Thread": "线程",
+  "Confirm with your pairing code to dispatch": "派发前请确认配对码",
+  "Dispatch was not confirmed": "未确认派发",
+  "Incorrect pairing code": "配对码不正确"
 });
