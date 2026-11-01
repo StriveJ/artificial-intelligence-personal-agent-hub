@@ -92,3 +92,8 @@ test("the executor prepends earlier results from the same thread", async t => {
   assert.match(result.summary, /Wrote the parser/);
   assert.match(result.summary, /Continue the work/);
 });
+test("the executor refuses a working directory inside .git", async t => {
+  const root = instance(t);
+  const executor = createHarnessExecutor({ root, entry: join(root, 'stub.mjs') });
+  await assert.rejects(() => executor.run({ prompt: "x", cwd: '.git' }), error => error.code === 'cwd-forbidden');
+});

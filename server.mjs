@@ -178,6 +178,12 @@ export async function createHub({ root, runtimeDir, adapter, runner, hostname = 
   const vision=createDeepSeekVision({engine,fetcher:visionFetcher,responseLanguage});
   const nodes = main.enabled ? createNodeControl({ runtimeDir }) : null;
   const taskQueue = main.enabled ? createTaskQueue({ runtimeDir }) : null;
+  // Expired leases must be requeued even when no worker is polling, otherwise a sub that
+  // dies quietly leaves its task leased forever.
+  if (taskQueue) {
+    const sweepTimer = setInterval(() => { try { taskQueue.sweep(); } catch { /* retried next tick */ } }, 30_000);
+    sweepTimer.unref?.();
+  }
   let dailyDigest=null;
   const instanceSync = main.enabled ? createInstanceSync({ root, runtimeDir, testMode, afterUpdate: async () => {
     if (!injectedAdapter) adapter = await createAipaAdapter(root, { contextBudgetBytes });

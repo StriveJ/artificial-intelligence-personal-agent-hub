@@ -113,7 +113,9 @@ test("a late result from the expired attempt is kept instead of being discarded"
   time.advance(61_000);
   queue.sweep();
   assert.equal(queue.get('task-0001').state, 'queued');
-  const late = queue.ack({ nodeId: 'sub-a', id: 'task-0001', attempt: claimed.attempt, status: 'done', summary: "Finished after the lease expired" });
+  // Without the expired lease id the caller cannot prove it was the worker that ran it.
+  assert.throws(() => queue.ack({ nodeId: 'sub-a', id: 'task-0001', attempt: claimed.attempt, status: 'done', summary: "no lease" }), error => error.status === 403);
+  const late = queue.ack({ nodeId: 'sub-a', id: 'task-0001', leaseId: claimed.leaseId, attempt: claimed.attempt, status: 'done', summary: "Finished after the lease expired" });
   assert.equal(late.state, 'done');
   assert.equal(late.result.late, true);
   assert.equal(queue.claim({ nodeId: 'sub-a' }), null);
@@ -191,4 +193,64 @@ test("tasks in one thread carry earlier results to the next claim", t => {
   assert.match(next.thread.tail[0].summary, /first step/);
   assert.equal(queue.list({ thread: 'thr-a' }).length, 2);
   assert.equal(queue.list({ thread: 'other' }).length, 0);
+});
+test("a claim whose response was lost returns the same lease without burning an attempt", t => {
+  const runtimeDir = temp(t), time = clock();
+  const queue = createTaskQueue({ runtimeDir, now: time.now });
+  queue.submit({ id: 'task-0001', prompt: "Work", timeoutMs: 30_000 });
+  const first = queue.claim({ nodeId: 'sub-a' });
+  assert.equal(queue.claim({ nodeId: 'sub-a' }), null, 'a normal claim must not replay the lease');
+  const again = queue.claim({ nodeId: 'sub-a', resume: true });
+  assert.equal(again.leaseId, first.leaseId);
+  assert.equal(queue.get('task-0001').attempts, 1);
+  assert.equal(queue.claim({ nodeId: 'sub-b' }), null, "another worker must not take a live lease");
+});
+
+test("a late result must come from the worker that actually held the lease", t => {
+  const runtimeDir = temp(t), time = clock();
+  const queue = createTaskQueue({ runtimeDir, now: time.now });
+  queue.submit({ id: 'task-0001', prompt: "Work", timeoutMs: 10_000, leaseSeconds: 30 });
+  const claimed = queue.claim({ nodeId: 'sub-a' });
+  time.advance(31_000);
+  queue.sweep();
+  assert.throws(
+    () => queue.ack({ nodeId: 'sub-evil', id: 'task-0001', leaseId: 'forged-lease', attempt: 1, status: 'done', summary: "FORGED" }),
+    error => error.status === 403,
+  );
+  const accepted = queue.ack({ nodeId: 'sub-a', id: 'task-0001', leaseId: claimed.leaseId, attempt: 1, status: 'done', summary: "Real work" });
+  assert.equal(accepted.result.summary, "Real work");
+  assert.equal(accepted.result.late, true);
+});
+
+test("the final attempt's real result is kept even after the lease expired", t => {
+  const runtimeDir = temp(t), time = clock();
+  const queue = createTaskQueue({ runtimeDir, now: time.now });
+  queue.submit({ id: 'task-0001', prompt: "Work", timeoutMs: 10_000, leaseSeconds: 30 });
+  let last = null;
+  for (let attempt = 1; attempt <= 3; attempt += 1) {
+    last = queue.claim({ nodeId: 'sub-a' });
+    assert.ok(last, 'attempt ' + attempt + ' must be claimable');
+    time.advance(31_000);
+    queue.sweep();
+    time.advance(61_000); // clear the retry backoff before the next claim
+  }
+  assert.equal(queue.get('task-0001').state, 'timeout');
+  const kept = queue.ack({ nodeId: 'sub-a', id: 'task-0001', leaseId: last.leaseId, attempt: 3, status: 'done', summary: "Finished on the third try" });
+  assert.equal(kept.state, 'done');
+  assert.equal(kept.result.late, true);
+  assert.match(kept.result.summary, /third try/);
+});
+
+test("a queue file written by something else stops startup instead of being wiped", t => {
+  const runtimeDir = temp(t);
+  writeFileSync(join(runtimeDir, 'task-queue.json'), JSON.stringify({ kind: 'something-else', tasks: { x: 1 } }), 'utf8');
+  assert.throws(() => createTaskQueue({ runtimeDir }), /written by something else/);
+  assert.match(readFileSync(join(runtimeDir, 'task-queue.json'), 'utf8'), /something-else/);
+});
+
+test("thread ids are validated", t => {
+  const runtimeDir = temp(t);
+  const queue = createTaskQueue({ runtimeDir });
+  assert.throws(() => queue.submit({ prompt: "Work", thread: 'not a thread id' }), error => error.status === 400);
+  assert.ok(queue.submit({ prompt: "Work", thread: 'thr-2026-11-01.a' }).thread);
 });

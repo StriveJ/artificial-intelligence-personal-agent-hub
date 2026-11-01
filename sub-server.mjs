@@ -106,7 +106,14 @@ export async function createSubHub(config) {
   }
   async function post(path, body) {
     const response = await fetch(origin + path, { method: 'POST', redirect: 'error', headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` }, body: JSON.stringify({ ...body, nodeId, installationId }), signal: AbortSignal.timeout(15_000) });
-    if (!response.ok) throw new Error("Main/sub communication incomplete");
+    if (!response.ok) {
+      // The status matters to the worker: 403/409 means the lease is gone, not a network blip.
+      let detail = '';
+      try { detail = String((await response.json())?.error || '').slice(0, 200); } catch { detail = ''; }
+      const error = new Error(`Main/sub communication incomplete${detail ? `: ${detail}` : ''}`);
+      error.status = response.status;
+      throw error;
+    }
     return response.json();
   }
   // The Main Hub owns the display name. Keep the assigned name in this device's own

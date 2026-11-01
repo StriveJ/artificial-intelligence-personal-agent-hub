@@ -94,3 +94,26 @@ test("the worker passes the thread context to the executor", async () => {
   assert.equal(received.thread.id, 'thr-a');
   assert.equal(received.thread.tail[0].summary, 'done before');
 });
+test("the worker abandons the task when the hub says the lease is gone", async () => {
+  const calls = [];
+  let claimed = false;
+  const post = async path => {
+    calls.push(path);
+    if (path.endsWith('/tasks/claim')) {
+      if (claimed) return { task: null };
+      claimed = true;
+      return { task: { id: 'task-0001', attempt: 1, prompt: "work", cwd: '', timeoutMs: 5_000, budgetUsd: null, thread: { id: 'thr-a', tail: [] }, leaseId: 'lease-1', leaseSeconds: 30, leaseExpiresAt: new Date(Date.now() + 30_000).toISOString() } };
+    }
+    if (path.endsWith('/tasks/beat')) throw Object.assign(new Error("Task lease is stale"), { status: 409 });
+    if (path.endsWith('/tasks/ack')) { calls.push('ACK'); return {}; }
+    return {};
+  };
+  let aborted = false;
+  const worker = createTaskWorker({ post, enabled: true, beatEveryMs: 10, runner: ({ signal }) => new Promise((_, reject) => {
+    signal.addEventListener('abort', () => { aborted = true; reject(Object.assign(new Error("aborted"), { code: 'aborted' })); });
+  }) });
+  await worker.drain();
+  assert.equal(aborted, true);
+  assert.equal(calls.includes('ACK'), false, "a stale result must not be reported");
+  assert.equal(worker.status().last.code, 'lease-lost');
+});
