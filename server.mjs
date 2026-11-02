@@ -623,7 +623,9 @@ export async function createHub({ root, runtimeDir, adapter, runner, hostname = 
           if (!events.length) throw problem("No perception events", 400);
           const dir = join(runtimeDir, 'perception');
           mkdirSync(dir, { recursive: true });
-          const day = new Date().toISOString().slice(0, 10);
+          // Bucket by the event's own date: the hub runs in UTC, the device does not.
+          const stamp = events.map(event => String(event.at || '')).find(value => /^\d{4}-\d{2}-\d{2}/.test(value));
+          const day = stamp ? stamp.slice(0, 10) : new Date().toISOString().slice(0, 10);
           const receivedAt = new Date().toISOString();
           appendFileSync(join(dir, `${node.id}-${day}.jsonl`), events.map(event => JSON.stringify({ ...event, nodeId: node.id, receivedAt })).join('\n') + '\n');
           return send(res, { ok: true, accepted: events.length });
