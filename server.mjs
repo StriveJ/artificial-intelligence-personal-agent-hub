@@ -1,5 +1,5 @@
 import { createServer } from 'node:http';
-import { readFileSync, mkdirSync, realpathSync, openSync, writeFileSync, closeSync, unlinkSync, existsSync, appendFileSync } from 'node:fs';
+import { readFileSync, readdirSync, mkdirSync, realpathSync, openSync, writeFileSync, closeSync, unlinkSync, existsSync, appendFileSync } from 'node:fs';
 import { resolve, join, dirname, basename } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { randomBytes, randomUUID, createHash, timingSafeEqual } from 'node:crypto';
@@ -599,7 +599,7 @@ export async function createHub({ root, runtimeDir, adapter, runner, hostname = 
       const pathname = url.pathname;
       if (!['GET', 'POST'].includes(req.method)) throw problem("Unsupported request method", 405);
       if (closing && req.method === 'POST') throw problem("Hub is stopping. Preserve your input and retry.", 503);
-      const nodeChannel = nodes && ['/api/nodes/poll', '/api/nodes/ack', '/api/nodes/tasks/claim', '/api/nodes/tasks/beat', '/api/nodes/tasks/ack'].includes(pathname);
+      const nodeChannel = nodes && ['/api/nodes/poll', '/api/nodes/ack', '/api/nodes/tasks/claim', '/api/nodes/tasks/beat', '/api/nodes/tasks/ack', '/api/nodes/perception'].includes(pathname);
       if (req.method === 'POST' && !nodeChannel) {
         if (req.headers.origin !== origin) throw problem("Request origin mismatch", 403);
       }
@@ -617,6 +617,17 @@ export async function createHub({ root, runtimeDir, adapter, runner, hostname = 
       if (req.method === 'POST' && nodeChannel && !pathname.startsWith('/api/nodes/tasks/')) {
         const body = await bodyOf(req);
         const token = req.headers.authorization?.match(/^Bearer (\S+)$/)?.[1];
+        if (pathname === '/api/nodes/perception') {
+          const node = nodes.authenticate(body.nodeId, token);
+          const events = Array.isArray(body.events) ? body.events.slice(0, 500) : [];
+          if (!events.length) throw problem("No perception events", 400);
+          const dir = join(runtimeDir, 'perception');
+          mkdirSync(dir, { recursive: true });
+          const day = new Date().toISOString().slice(0, 10);
+          const receivedAt = new Date().toISOString();
+          appendFileSync(join(dir, `${node.id}-${day}.jsonl`), events.map(event => JSON.stringify({ ...event, nodeId: node.id, receivedAt })).join('\n') + '\n');
+          return send(res, { ok: true, accepted: events.length });
+        }
         if (pathname.endsWith('/poll')) {
           taskQueue?.sweep();
           const before = nodes.list().find(node => node.id === body.nodeId)?.status;
@@ -681,6 +692,23 @@ export async function createHub({ root, runtimeDir, adapter, runner, hostname = 
         return send(res, { ok: true });
       }
       if (!authenticated(req)) throw problem("Connect to your AIPA first", 401);
+      if (req.method === 'GET' && pathname === '/api/perception/timeline') {
+        const day = String(url.searchParams.get('date') || new Date().toISOString().slice(0, 10));
+        if (!/^\d{4}-\d{2}-\d{2}$/.test(day)) throw problem("Invalid date", 400);
+        const dir = join(runtimeDir, 'perception');
+        const events = [];
+        if (existsSync(dir)) {
+          for (const file of readdirSync(dir)) {
+            if (!file.endsWith(`-${day}.jsonl`)) continue;
+            for (const line of readFileSync(join(dir, file), 'utf8').split('\n')) {
+              if (!line.trim()) continue;
+              try { events.push(JSON.parse(line)); } catch { /* skip a torn line */ }
+            }
+          }
+        }
+        events.sort((a, b) => String(a.at).localeCompare(String(b.at)));
+        return send(res, { date: day, events });
+      }
       if (req.method === 'GET' && pathname === '/api/site-settings') return send(res, siteSettings.get());
       if (req.method === 'POST' && pathname === '/api/site-settings') return send(res, siteSettings.update(await bodyOf(req)));
       // Keep diagnostics available while Core is blocked, without invoking it.

@@ -158,3 +158,15 @@ test("dispatching requires confirming the pairing code", async t => {
   assert.equal(denied.status, 403);
   assert.equal((await denied.json()).code, 'dispatch-locked');
 });
+test("perception events are stored and returned for one day", async t => {
+  const { node, session } = await hubWithNode(t);
+  const at = new Date().toISOString();
+  const posted = await node('/api/nodes/perception', { events: [{ at, channel: 'camera', kind: 'signals', text: 'face', duration_s: 60 }] });
+  assert.equal(posted.status, 200);
+  assert.equal((await posted.json()).accepted, 1);
+  const day = at.slice(0, 10);
+  const listed = await (await session('/api/perception/timeline?date=' + day, null, 'GET')).json();
+  assert.equal(listed.events.length, 1);
+  assert.equal(listed.events[0].channel, 'camera');
+  assert.equal(listed.events[0].nodeId, 'lan-1');
+});
