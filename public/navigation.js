@@ -5,6 +5,7 @@ export const NAV_ITEMS = Object.freeze([
   { id: 'memory', label: "Memory", short: "Memory", icon: '⌕' },
   { id: 'tasks', label: "Scheduled tasks", short: "Schedule", icon: '◷' },
   { id: 'dispatch', label: "Task dispatch", short: "Dispatch", icon: '➤' },
+  { id: 'timeline', label: "Timeline", short: "Timeline", icon: '⏱' },
   { id: 'status', label: "Runtime status", short: "Status", icon: '◎' },
   { id: 'pushes', label: "Notifications", short: "Push", icon: '✧' },
   { id: 'connect', label: "Connection and devices", short: "Connect", icon: '↗' },

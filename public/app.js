@@ -6,6 +6,7 @@ import { createNavigation } from './navigation.js';
 import { createTaskList } from './task-list.js';
 import { createUpdatePanel } from './updates.js';
 import { createDeviceList, createActivityTimeline,createRecoveryPanel } from './status.js';
+import { initTimeline } from './timeline.js';
 import {createConflictReviewPanel} from './conflict-review.js';
 import {jsonRequest,xhrRequest} from './json-api.js';
 
@@ -59,11 +60,12 @@ function showView(view) {
   state.view = view;
   clearTimeout(state.taskPolling);
   clearTimeout(state.statusPolling);
-  for (const name of ['chat', 'notes', 'memory', 'tasks', 'dispatch', 'status', 'pushes']) $(`${name}-view`).hidden = name !== view;
+  for (const name of ['chat', 'notes', 'memory', 'tasks', 'dispatch', 'timeline', 'status', 'pushes']) $(`${name}-view`).hidden = name !== view;
   navigation.setActive(view);
-  setText($('view-label'), () => t({ chat: "Chat", notes: "Notes", memory: "Memory", tasks: "Scheduled tasks", dispatch: "Task dispatch", status: "Runtime status", pushes: "Notifications" }[view]));
+  setText($('view-label'), () => t({ chat: "Chat", notes: "Notes", memory: "Memory", tasks: "Scheduled tasks", dispatch: "Task dispatch", timeline: "Timeline", status: "Runtime status", pushes: "Notifications" }[view]));
   if (view === 'notes') void loadNotes().catch(error => toast(error.message));
   if (view === 'tasks') void loadTasks().catch(error => toast(error.message));
+  if (view === 'timeline') void timeline.load().catch(error => toast(error.message));
   if (view === 'status') void loadStatus().catch(error => toast(error.message));
   if (view === 'pushes') void loadPushes().catch(error => toast(error.message));
   window.scrollTo({ top: 0 });
@@ -232,6 +234,7 @@ async function loadTasks() {
   if (!document.hidden && (state.view === 'tasks' || tasks.some(task => task.status === 'running'))) state.taskPolling = setTimeout(() => loadTasks().catch(error => toast(error.message)), 4000);
 }
 
+const timeline = initTimeline({ api, t, toast });
 const renderDevices = createDeviceList({
   container: $('status-devices'),
   formatDate: date,

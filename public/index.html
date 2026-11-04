@@ -177,6 +177,19 @@
         </form>
         <div id="dispatch-list" aria-live="polite"></div>
       </section>
+      <section id="timeline-view" class="view content-view" hidden>
+        <div class="section-intro"><p class="eyebrow">WHAT HAPPENED, HOUR BY HOUR</p><h1>Today, from the sensors.</h1><p class="muted">Derived events from this instance's devices: speech segments and camera signals. Raw audio and video stay on the device that captured them.</p></div>
+        <div class="timeline-toolbar">
+          <button id="timeline-prev" class="text-button" type="button">Previous day</button>
+          <input id="timeline-date" type="date" aria-label="Day">
+          <button id="timeline-next" class="text-button" type="button">Next day</button>
+          <button id="timeline-refresh" class="text-button" type="button">Refresh</button>
+          <input id="timeline-search" type="search" placeholder="Search text" aria-label="Search text">
+        </div>
+        <p id="timeline-summary" class="muted" aria-live="polite"></p>
+        <div id="timeline-events"></div>
+        <p id="timeline-empty" class="activity-empty" hidden></p>
+      </section>
       <section id="status-view" class="view content-view" hidden>
         <div class="section-intro"><p class="eyebrow">WHAT IS RUNNING RIGHT NOW</p><h1>Devices and activity at a glance.</h1><p class="muted">View main and sub Hub availability, recent synchronization, and activity. Logs contain actions and results, without conversation content.</p></div>
         <p id="status-summary" class="status-summary" aria-live="polite"></p>

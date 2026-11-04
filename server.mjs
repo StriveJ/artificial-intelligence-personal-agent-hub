@@ -70,6 +70,7 @@ const assets = new Map([
   ['/navigation.js', ['navigation.js', 'text/javascript; charset=utf-8']],
   ['/task-list.js', ['task-list.js', 'text/javascript; charset=utf-8']],
   ['/task-queue.js', ['task-queue.js', 'text/javascript; charset=utf-8']],
+  ['/timeline.js', ['timeline.js', 'text/javascript; charset=utf-8']],
   ['/updates.js', ['updates.js', 'text/javascript; charset=utf-8']],
   ['/status.js', ['status.js', 'text/javascript; charset=utf-8']],
   ['/conflict-review.js', ['conflict-review.js', 'text/javascript; charset=utf-8']],
